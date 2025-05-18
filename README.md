@@ -1,126 +1,131 @@
-# 心语：基于AI的心理健康支持应用
+# HeartVoice: AI-Powered Mental Health Support App
 
-“心语”是一款面向广大年轻人群体与残障人群的心理健康支持应用。通过情绪感知、语音识别与情感分析等技术，打造一个“轻交互、强陪伴”的数字疗愈空间，助力用户实现情绪自我觉察、心理自我调节与状态长期追踪。
-
----
-
-## 📌 项目研究内容及实施方向
-
-- 提供**语音/文本情绪记录**功能，提升情绪表达的可达性；
-- 基于**自然语言处理与生理数据分析**进行情绪识别；
-- 输出**个性化心理建议**，如正念训练、AI疏导、放松引导；
-- 长期记录与分析用户情绪趋势，构建**用户画像**；
-- 实现本地数据加密与隐私保护，保障用户信息安全。
+**HeartVoice** is a mental wellness app designed for young individuals and people with disabilities. By integrating emotion recognition, speech analysis, and intelligent feedback, it creates a lightweight yet empathetic digital space for emotional self-awareness, self-regulation, and long-term mental state tracking.
 
 ---
 
-## 🧩 用户需求分析
+## 📌 Project Scope and Implementation
 
-| 编号 | 用户需求描述 | 优先级 | 备注 |
-|------|----------------|--------|------|
-| 1 | 用户可通过语音或文本记录情绪内容，并由系统识别情绪类别（焦虑、愉快等）。 | P0 | 接入语音转文本模型 |
-| 2 | 系统读取 HRV/心率等生理数据，增强情绪识别精度 | P0 | 集成 HealthKit 或设备接口 |
-| 3 | 自动生成个性化情绪调节建议（如正念练习、情绪引导等） | P0 | 可结合建议卡片组件 |
-| 4 | 用户首次填写基本信息，系统构建用户画像与情绪曲线 | P1 | 后续用于个性化推送 |
-| 5 | 历史数据可视化，支持日/周/月趋势图展示 | P0 | 使用 Swift Charts 实现 |
-| 6 | 所有数据本地化加密存储，确保用户隐私 | P2 | 使用 AES + CoreData |
+- Enables voice/text-based emotional journaling for better emotional expression.
+- Applies NLP and physiological data (e.g., HRV) for emotion recognition.
+- Provides personalized psychological suggestions (e.g., mindfulness, AI-guided conversations).
+- Continuously tracks emotional trends and builds individual emotional profiles.
+- Ensures local data encryption and strong user privacy protection.
 
 ---
 
-## ⚙️ 功能模块
+## 🧩 User Requirements
 
-| 模块名称 | 功能描述 |
-|----------|-----------|
-| 用户交互层 | 提供语音/文字输入界面，兼容视觉障碍语音操作 |
-| 情绪识别引擎 | 基于 NLP 模型（如 BERT）识别用户情绪类型 |
-| 生理数据采集 | 接入 HRV/心率信息，与情绪识别联合判断 |
-| 情绪反馈生成 | 匹配建议库，推荐正念、冥想、AI对话等内容 |
-| 用户画像系统 | 记录并分析情绪历史，生成趋势图与心理画像 |
-| 数据可视化层 | 展示折线图、热力图等历史情绪波动信息 |
-| 本地数据存储 | 使用 CoreData 加密保存所有用户隐私数据 |
-| AI情绪助理 | 集成多轮对话功能，支持情绪疏导对话式建议 |
+| ID | Description | Priority | Notes |
+|----|-------------|----------|-------|
+| 1 | Allow users to record their emotions via voice or text. The system identifies emotion types (e.g., anxious, happy). | P0 | Integrate voice-to-text engine |
+| 2 | Acquire HRV/heart rate data to enhance emotion analysis accuracy. | P0 | Integrate with HealthKit or wearable API |
+| 3 | Generate personalized mental health advice based on detected emotional states. | P0 | Suggest cards, breathing, or mindfulness tips |
+| 4 | Create user profiles based on initial input and continuous data tracking. | P1 | Enables adaptive recommendations |
+| 5 | Visualize emotional trends by day/week/month. | P0 | Use Swift Charts or equivalent |
+| 6 | All user data should be encrypted and stored locally. | P2 | Use AES with CoreData for storage |
 
 ---
 
-## 🔗 核心链路设计
+## ⚙️ Functional Modules
 
-### 1. 情绪采集与识别链
+| Module | Description |
+|--------|-------------|
+| User Interaction | Voice/text input interface with accessibility for visually impaired users |
+| Emotion Recognition | NLP-based emotion classification (e.g., BERT) |
+| Physiological Data Collection | HRV and heart rate integration |
+| Emotion Feedback Generator | Matches suggestions based on real-time and historical data |
+| User Profiling | Records and analyzes mood trends, builds emotional profiles |
+| Data Visualization | Graphs for emotion trends, HRV overlays |
+| Secure Data Storage | Local encrypted storage via CoreData |
+| AI Emotion Assistant | Multi-turn conversations for emotional relief and guidance |
+
+---
+
+## 🔗 Core Logical Workflows
+
+### 1. Emotion Capture and Recognition
 
 ```
-用户输入（语音/文本/HRV）
+User Input (Voice/Text/HRV)
    ↓
-语音转文本（Whisper）+ NLP分析
+Speech-to-Text (Whisper) + NLP Parsing
    ↓
-情绪识别（BERT/TextCNN） → CoreData本地存储
+Emotion Classification (BERT/TextCNN) → Local Storage (CoreData)
 ```
 
-📌 模块：交互层、语音识别、情感分析  
-📌 技术点：语音识别、HRV接口、自然语言情绪分类
+📌 Modules: UI Layer, Speech/NLP Engine, Database  
+📌 Tech Stack: Whisper, BERT, HRV Sensor APIs
 
 ---
 
-### 2. 情绪分析与反馈生成链
+### 2. Emotion Feedback and Suggestion Flow
 
 ```
-情绪状态 + 历史记录 + HRV
+Emotion + History + HRV
    ↓
-个性化分析 → 情绪建议引擎
+Context-Aware Analysis
    ↓
-建议卡片 / 对话内容生成 → 前端展示
+Suggestion Engine → Mindfulness, Breathing, AI Chat
+   ↓
+Output Display to App Frontend
 ```
 
-📌 模块：情绪决策系统、建议库  
-📌 技术点：推荐逻辑、上下文感知、反馈机制
+📌 Modules: Suggestion Engine, Knowledge Base  
+📌 Techniques: Context Matching, RAG, User Feedback Integration
 
 ---
 
-### 3. 用户画像与趋势追踪链
+### 3. Profile Building and Trend Tracking
 
 ```
-情绪记录 + 用户反馈
+Emotion Records + Feedback
    ↓
-日/周/月趋势图生成 → 用户画像更新
+Trend Charts (Daily/Weekly/Monthly)
    ↓
-个性化建议与模型优化
+Profile Update → Adaptive Recommendation Loop
 ```
 
-📌 模块：画像引擎、图表系统  
-📌 技术点：数据聚合、标签生成、Swift Charts
+📌 Modules: Profile Engine, Chart System  
+📌 Techniques: Labeling, Trend Clustering, Swift Charts
 
 ---
 
-### 4. 情绪趋势可视化链
+### 4. Emotional Trend Visualization
 
 ```
-多源数据聚合（情绪 + HRV）
+Data Sources: Emotion + HRV + Feedback
    ↓
-统计处理（均值/波动检测）
+Aggregation & Analysis
    ↓
-折线图/热力图渲染 → 用户交互查看
+Dynamic Graphs (Line, Heatmap)
+   ↓
+Frontend Visualization with Filters
 ```
 
-📌 技术关键：本地查询优化、图层渲染设计、多维情绪映射
+📌 Tools: CoreData Queries, Swift Charts/Charts-iOS  
+📌 Focus: Real-time updates, multi-layered emotion mapping
 
 ---
 
-## 🛡️ 技术选型建议
+## 🛡️ Tech Stack Suggestions
 
-- 前端开发语言：Swift（iOS 原生）
-- 数据存储：CoreData（+ AES 加密）
-- 可视化库：Swift Charts / Charts-iOS
-- 语音识别：Apple Speech / Whisper API
-- 情绪分析模型：BERT / TextCNN / FastText
-- AI对话引擎：OpenAI / Dify / Claude 接口等
-
----
-
-## 📍未来可拓展方向
-
-- 多语言情绪识别适配（中英/方言）
-- 面向学校与机构开放“心理监测”后台权限
-- 与心理咨询平台对接，支持一键转介预约
-- 生成用户“情绪简报 PDF”，用于专业评估
+- Frontend: Swift (iOS Native)
+- Storage: CoreData + AES Encryption
+- Visualization: Swift Charts / Charts-iOS
+- Speech Recognition: Apple Speech / Whisper API
+- NLP Models: BERT / TextCNN / FastText
+- AI Dialogues: OpenAI / Dify / Claude APIs
 
 ---
 
-> 🧠 *“心语”不仅是一个应用，更是一位默默陪伴你的数字知己。*
+## 📍Future Extensions
+
+- Multi-language emotion support (Mandarin, English, dialects)
+- Institutional backend for monitoring students' mental health
+- Referral system to certified counseling services
+- Exportable PDF reports for professional use
+
+---
+
+> 🧠 *HeartVoice is not just an app — it's your silent companion for emotional well-being.*
