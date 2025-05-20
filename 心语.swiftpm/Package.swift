@@ -8,19 +8,19 @@ import PackageDescription
 import AppleProductTypes
 
 let package = Package(
-    name: "bbb",
+    name: "666",
     platforms: [
         .iOS("16.0")
     ],
     products: [
         .iOSApplication(
-            name: "bbb",
+            name: "666",
             targets: ["AppModule"],
             teamIdentifier: "6X33Y62X4Q",
             displayVersion: "1.0",
             bundleVersion: "1",
             appIcon: .placeholder(icon: .cat),
-            accentColor: .presetColor(.pink),
+            accentColor: .presetColor(.mint),
             supportedDeviceFamilies: [
                 .phone
             ],

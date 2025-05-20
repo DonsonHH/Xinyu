@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 import HealthKit
 import Speech
+import ARKit
 
 struct EmotionFeedbackView: View {
     @Environment(\.presentationMode) var presentationMode
@@ -813,6 +814,8 @@ struct EmotionAnalysisView: View {
         ("稻香", "周杰伦", "cover4"),
         ("夜曲", "周杰伦", "cover5")
     ]
+    @State private var showingARGuide = false
+    @State private var showCameraPermissionAlert = false
     
     // 生成时间标签
     private func generateTimeLabels() -> [String] {
@@ -1055,23 +1058,21 @@ struct EmotionAnalysisView: View {
                             .cornerRadius(15)
                         }
                         
-                        // 深呼吸练习卡片
+                        // 正念投影卡片
                         Button(action: {
-                            if let url = URL(string: "keep://") {
-                                UIApplication.shared.open(url)
-                            }
+                            startMindfulnessProjection()
                         }) {
                             HStack {
-                                Image(systemName: "lungs.fill")
+                                Image(systemName: "person.fill.viewfinder")
                                     .font(.system(size: 24))
                                     .foregroundColor(.white)
                                 
                                 VStack(alignment: .leading) {
-                                    Text("深呼吸练习")
+                                    Text("正念投影")
                                         .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.white)
                                     
-                                    Text("4-7-8呼吸法，缓解焦虑")
+                                    Text("AR冥想导师，实时呼吸引导")
                                         .font(.system(size: 12))
                                         .foregroundColor(.white.opacity(0.8))
                                 }
@@ -1091,8 +1092,11 @@ struct EmotionAnalysisView: View {
                             )
                             .cornerRadius(15)
                         }
+                        .sheet(isPresented: $showingARGuide) {
+                            ARMeditationGuideView()
+                        }
                         
-                        // 正念训练卡片
+                        // 冥想训练卡片
                         Button(action: {
                             if let url = URL(string: "keep://") {
                                 UIApplication.shared.open(url)
@@ -1104,7 +1108,7 @@ struct EmotionAnalysisView: View {
                                     .foregroundColor(.white)
                                 
                                 VStack(alignment: .leading) {
-                                    Text("正念训练")
+                                    Text("冥想训练")
                                         .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.white)
                                     
@@ -1176,6 +1180,46 @@ struct EmotionAnalysisView: View {
         }
         .navigationTitle("情绪分析")
         .navigationBarTitleDisplayMode(.inline)
+        .alert(isPresented: $showCameraPermissionAlert) {
+            Alert(
+                title: Text("需要相机权限"),
+                message: Text("请在设置中允许访问相机以使用AR正念投影功能"),
+                primaryButton: .default(Text("去设置"), action: openSettings),
+                secondaryButton: .cancel(Text("取消"))
+            )
+        }
+    }
+    
+    // 添加正念投影相关方法
+    private func startMindfulnessProjection() {
+        // 检查相机权限
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            // 已授权，启动 AR 正念投影
+            showingARGuide = true
+        case .notDetermined:
+            // 请求权限
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        self.showingARGuide = true
+                    } else {
+                        self.showCameraPermissionAlert = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            // 显示权限提示
+            showCameraPermissionAlert = true
+        @unknown default:
+            break
+        }
+    }
+    
+    private func openSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
     }
 }
 
@@ -1282,4 +1326,130 @@ struct LineChartView: View {
             }
         }
     }
+}
+
+// AR冥想导师视图
+struct ARMeditationGuideView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @State private var isBreathing = false
+    @State private var breathingPhase = 0 // 0: 吸气, 1: 保持, 2: 呼气
+    @State private var breathingScale: CGFloat = 1.0
+    @State private var showingGuide = true
+    @State private var timer: Timer? = nil
+    
+    let breathingTexts = [
+        "慢慢吸气，感受空气流入身体，带来新的能量……",
+        "保持呼吸，感受身体的平静与安定……",
+        "缓缓呼气，释放压力与疲惫，让心灵更加轻盈……"
+    ]
+    
+    var body: some View {
+        ZStack {
+            // AR相机预览
+            ARViewContainer()
+                .edgesIgnoringSafeArea(.all)
+            
+            // 冥想导师3D模型和动画
+            if showingGuide {
+                VStack {
+                    Spacer()
+                    
+                    // 呼吸动画
+                    Circle()
+                        .fill(Color.blue.opacity(0.3))
+                        .frame(width: 200, height: 200)
+                        .scaleEffect(breathingScale)
+                        .animation(
+                            Animation.easeInOut(duration: 4)
+                                .repeatForever(autoreverses: true),
+                            value: breathingScale
+                        )
+                        .onAppear {
+                            breathingScale = 1.5
+                            startBreathingCycle()
+                        }
+                        .onDisappear {
+                            timer?.invalidate()
+                        }
+                    
+                    // 呼吸指导文本，字体大小随圆形缩放
+                    Text(breathingText)
+                        .font(.system(size: 22 * breathingScale, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.black.opacity(0.5))
+                        .cornerRadius(10)
+                        .padding(.bottom, 50)
+                        .animation(.easeInOut(duration: 0.3), value: breathingScale)
+                }
+            }
+            
+            // 顶部控制栏
+            VStack {
+                HStack {
+                    Button(action: {
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title)
+                            .foregroundColor(.white)
+                            .padding()
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        showingGuide.toggle()
+                    }) {
+                        Image(systemName: showingGuide ? "eye.slash.fill" : "eye.fill")
+                            .font(.title)
+                            .foregroundColor(.white)
+                            .padding()
+                    }
+                }
+                .padding()
+                
+                Spacer()
+            }
+        }
+    }
+    
+    private var breathingText: String {
+        breathingTexts[breathingPhase]
+    }
+    
+    private func startBreathingCycle() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { _ in
+            DispatchQueue.main.async {
+                withAnimation(.easeInOut(duration: 1.0)) {
+                    breathingPhase = (breathingPhase + 1) % 3
+                    // 让圆和文字同步缩放
+                    switch breathingPhase {
+                    case 0: // 吸气
+                        breathingScale = 1.5
+                    case 1: // 保持
+                        breathingScale = 1.2
+                    case 2: // 呼气
+                        breathingScale = 0.9
+                    default:
+                        breathingScale = 1.0
+                    }
+                }
+            }
+        }
+    }
+}
+
+// AR视图容器
+struct ARViewContainer: UIViewRepresentable {
+    func makeUIView(context: Context) -> ARSCNView {
+        let arView = ARSCNView()
+        let configuration = ARWorldTrackingConfiguration()
+        configuration.planeDetection = .horizontal
+        arView.session.run(configuration)
+        return arView
+    }
+    
+    func updateUIView(_ uiView: ARSCNView, context: Context) {}
 } 
