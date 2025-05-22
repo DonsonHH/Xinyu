@@ -106,8 +106,8 @@ final class UserProfileManager: ObservableObject {
     }
     
     // 添加心情记录
-    func addMoodEntry(mood: String, emotion: String, hrvValue: Double, note: String) {
-        let entry = MoodEntry(mood: mood, emotion: emotion, hrvValue: hrvValue, note: note)
+    func addMoodEntry(date: Date, mood: String, emotion: String, hrvValue: Double, note: String) {
+        let entry = MoodEntry(date: date, mood: mood, emotion: emotion, hrvValue: hrvValue, note: note)
         moodEntries.append(entry)
         saveMoodEntries()
     }

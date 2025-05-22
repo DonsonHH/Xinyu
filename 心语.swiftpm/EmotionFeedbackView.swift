@@ -196,7 +196,7 @@ struct EmotionFeedbackView: View {
                             .foregroundColor(.gray)
                         
                         HStack(spacing: 20) {
-                            Button(action: {
+                        Button(action: {
                                 recordingMode = .voice
                                 isRecordingVoice = true
                                 showingTextInput = false
@@ -229,7 +229,7 @@ struct EmotionFeedbackView: View {
                                         .font(.caption)
                                 }
                                 .foregroundColor(showingTextInput ? .orange : .gray)
-                                .padding()
+                    .padding()
                                 .background(
                                     RoundedRectangle(cornerRadius: 15)
                                         .fill(showingTextInput ? Color.orange.opacity(0.2) : Color.gray.opacity(0.1))
@@ -302,7 +302,7 @@ struct EmotionFeedbackView: View {
                             VStack(spacing: 15) {
                                 Text("正在录音...")
                                     .font(.system(size: 16))
-                                    .foregroundColor(.orange)
+                                .foregroundColor(.orange)
                                 
                                 // 波形动画
                                 WaveformView(amplitude: waveformAmplitude)
@@ -314,19 +314,19 @@ struct EmotionFeedbackView: View {
                                 }) {
                                     Image(systemName: "stop.circle.fill")
                                         .font(.system(size: 30))
-                                .foregroundColor(.orange)
-                                }
+                                    .foregroundColor(.orange)
+                            }
                                 
                                 // 识别的文本显示
                                 if !voiceText.isEmpty {
                                     Text(voiceText)
                                         .font(.system(size: 14))
-                                        .foregroundColor(.gray)
+                                .foregroundColor(.gray)
                                         .padding()
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .background(Color.gray.opacity(0.1))
                                         .cornerRadius(10)
-                                        .padding(.horizontal)
+                                .padding(.horizontal)
                                 }
                                 
                                 // 保存按钮
@@ -349,17 +349,17 @@ struct EmotionFeedbackView: View {
                                             .padding()
                                             .background(Color.orange)
                                             .cornerRadius(10)
-                                    }
-                                    .padding(.top, 10)
-                                }
                             }
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(Color.white)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                            )
-                            .padding(.horizontal)
+                            .padding(.top, 10)
+                                }
+                        }
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                        )
+                        .padding(.horizontal)
                         }
                         
                         // 文本输入弹窗
@@ -393,15 +393,15 @@ struct EmotionFeedbackView: View {
                                         .cornerRadius(10)
                                 }
                                 .padding()
-                            }
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(Color.white)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                            )
-                            .padding(.horizontal)
                         }
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.white)
+                                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                        )
+                        .padding(.horizontal)
+                    }
                         }
                         .padding()
                         .background(
@@ -415,14 +415,14 @@ struct EmotionFeedbackView: View {
                     NavigationLink(destination: EmotionAnalysisView()) {
                             HStack {
                             Text("查看详细情绪分析")
-                                .font(.system(size: 16, weight: .medium))
+                            .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.white)
                             
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.white)
                         }
-                        .padding()
+                            .padding()
                         .frame(maxWidth: .infinity)
                         .background(Color.orange)
                         .cornerRadius(15)
