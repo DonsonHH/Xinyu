@@ -29,19 +29,13 @@ private actor MessageHistoryActor {
 final class StreamingAPIManager: @unchecked Sendable {
     static let shared = StreamingAPIManager()
     
-    private let defaultAPIKey = "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"
+    // 千问API配置（和QianwenService一致，直接写死）
+    private let apiKey = "sk-6267c004c2ac41d69c098628660f41d0"
+    private let baseURL = "https://dashscope.aliyuncs.com/api/v1/apps/5c9a2dd9688448ccbdc5247c289b5096/completion"
     private let messageHistoryActor: MessageHistoryActor
     
     private init() {
-        self.messageHistoryActor = MessageHistoryActor(maxHistoryLength: 100)
-    }
-    
-    private func getAPISettings() -> (key: String, model: String, temperature: Double) {
-        let apiKey = UserDefaults.standard.string(forKey: "apiKey") ?? defaultAPIKey
-        let apiModel = UserDefaults.standard.string(forKey: "apiModel") ?? "gpt-4o-mini"
-        let temperature = UserDefaults.standard.double(forKey: "temperature")
-        
-        return (apiKey, apiModel, temperature)
+        self.messageHistoryActor = MessageHistoryActor(maxHistoryLength: 10)
     }
     
     private func addToHistory(role: String, content: String) async {
@@ -57,107 +51,111 @@ final class StreamingAPIManager: @unchecked Sendable {
     }
     
     func streamChatRequest(userMessage: String) async throws -> AsyncThrowingStream<String, Error> {
-        let settings = getAPISettings()
+        print("StreamingAPIManager: 准备发起请求，userMessage: \(userMessage)")
         
-        guard !settings.key.isEmpty else {
-            throw APIError.noAPIKey
-        }
+        // 1. 添加用户消息到历史
+        await addToHistory(role: "user", content: userMessage)
+        let messages = await getMessageHistory() + [["role": "user", "content": userMessage]]
         
-        let apiDomain = UserDefaults.standard.string(forKey: "apiDomain") ?? "https://api.openai.com"
-        let apiPath = UserDefaults.standard.string(forKey: "apiPath") ?? "/v1/chat/completions"
+        // 2. 构建请求体（和千问一致）
+        let requestBody: [String: Any] = [
+            "input": ["messages": messages],
+            "parameters": ["incremental_output": true]
+        ]
         
-        guard let url = URL(string: apiDomain + apiPath) else {
+        guard let url = URL(string: baseURL) else {
+            print("StreamingAPIManager: URL无效")
             throw APIError.invalidURL
         }
-        
-        // 添加用户消息到历史记录
-        await addToHistory(role: "user", content: userMessage)
-        
-        // 准备请求体
-        var messages: [[String: String]] = [
-            ["role": "system", "content": "你是一个友好的AI助手，用中文回答用户的问题。请保持回答简洁明了，如果问题涉及敏感内容，请礼貌地拒绝回答。"]
-        ]
-        messages.append(contentsOf: await getMessageHistory())
-        
-        let requestBody: [String: Any] = [
-            "model": settings.model,
-            "messages": messages,
-            "temperature": settings.temperature,
-            "stream": true,
-            "presence_penalty": 0.6,
-            "frequency_penalty": 0.3
-        ]
-        
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            print("StreamingAPIManager: JSON编码失败")
             throw APIError.jsonEncodingError
         }
         
+        // 3. 构建请求（和千问一致）
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue("Bearer \(settings.key)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("enable", forHTTPHeaderField: "X-DashScope-SSE")
         request.httpBody = jsonData
         
-        let (result, response) = try await URLSession.shared.bytes(for: request)
+        // 4. 捕获所有需要的值
+        let finalRequest = request
+        let finalURL = url
+        let finalJsonData = jsonData
         
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
+        print("StreamingAPIManager: 请求URL: \(finalURL)")
+        print("StreamingAPIManager: 请求Headers: \(finalRequest.allHTTPHeaderFields ?? [:])")
+        print("StreamingAPIManager: 请求体: \(String(data: finalJsonData, encoding: .utf8) ?? "")")
         
-        switch httpResponse.statusCode {
-        case 200...299:
-            break
-        case 401:
-            throw APIError.authenticationError
-        case 429:
-            throw APIError.rateLimitError
-        case 500:
-            throw APIError.serverError(statusCode: 500)
-        default:
-            throw APIError.serverError(statusCode: httpResponse.statusCode)
-        }
-        
-        return AsyncThrowingStream<String, Error> { continuation in
-            Task(priority: .userInitiated) {
+        return AsyncThrowingStream { @Sendable continuation in
+            let task = Task(priority: .userInitiated) {
                 do {
+                    let (result, response) = try await URLSession.shared.bytes(for: finalRequest)
+                    
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        print("StreamingAPIManager: 无效的HTTP响应")
+                        throw APIError.invalidResponse
+                    }
+                    
+                    switch httpResponse.statusCode {
+                    case 200...299:
+                        break
+                    case 401:
+                        print("StreamingAPIManager: 认证错误")
+                        throw APIError.authenticationError
+                    case 429:
+                        print("StreamingAPIManager: 请求频率限制")
+                        throw APIError.rateLimitError
+                    case 500:
+                        print("StreamingAPIManager: 服务器错误 500")
+                        throw APIError.serverError(statusCode: 500)
+                    default:
+                        print("StreamingAPIManager: 服务器错误 \(httpResponse.statusCode)")
+                        throw APIError.serverError(statusCode: httpResponse.statusCode)
+                    }
+                    
                     var accumulatedContent = ""
                     
                     for try await line in result.lines {
-                        guard line.hasPrefix("data: "),
-                              let data = line.dropFirst(6).data(using: .utf8) else {
+                        guard line.hasPrefix("data:"),
+                              let data = line.dropFirst(5).data(using: .utf8) else {
                             continue
                         }
                         
                         // 处理 [DONE] 消息
                         if line.contains("[DONE]") {
-                            // 将完整的回复添加到历史记录
+                            print("StreamingAPIManager: 收到完成信号")
                             if !accumulatedContent.isEmpty {
                                 await self.addToHistory(role: "assistant", content: accumulatedContent)
                             }
                             break
                         }
                         
-                        // 解析JSON数据
+                        // 修改：千问的响应格式是 output.text
                         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                              let choices = json["choices"] as? [[String: Any]],
-                              let firstChoice = choices.first,
-                              let delta = firstChoice["delta"] as? [String: Any],
-                              let content = delta["content"] as? String else {
+                              let output = json["output"] as? [String: Any],
+                              let text = output["text"] as? String else {
+                            print("StreamingAPIManager: JSON解析失败，原始数据: \(String(data: data, encoding: .utf8) ?? "")")
                             continue
                         }
                         
-                        accumulatedContent += content
-                        continuation.yield(content)
+                        print("StreamingAPIManager: 收到内容: \(text)")
+                        accumulatedContent += text
+                        continuation.yield(text)
                     }
                     
                     continuation.finish()
                 } catch {
+                    print("StreamingAPIManager: 发生错误: \(error)")
                     continuation.finish(throwing: error)
                 }
-                
-                continuation.onTermination = { @Sendable status in
-                    print("Stream terminated with status: \(status)")
-                }
+            }
+            
+            continuation.onTermination = { @Sendable status in
+                print("StreamingAPIManager: 流终止，状态: \(status)")
+                task.cancel()
             }
         }
     }
