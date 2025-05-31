@@ -1,5 +1,14 @@
 import Foundation
 
+enum APIError: Error {
+    case invalidURL
+    case jsonEncodingError
+    case invalidResponse
+    case authenticationError
+    case rateLimitError
+    case serverError(statusCode: Int)
+}
+
 @available(iOS 15.0, *)
 private actor MessageHistoryActor {
     private var messageHistory: [[String: String]] = []
@@ -30,8 +39,8 @@ final class StreamingAPIManager: @unchecked Sendable {
     static let shared = StreamingAPIManager()
     
     // 千问API配置（和QianwenService一致，直接写死）
-    private let apiKey = "sk-6267c004c2ac41d69c098628660f41d0"
-    private let baseURL = "https://dashscope.aliyuncs.com/api/v1/apps/5c9a2dd9688448ccbdc5247c289b5096/completion"
+    private let apiKey = "sk-2b0120253a5c4a06bba8a9e4164dea9a"
+    private let baseURL = "https://dashscope.aliyuncs.com/api/v1/apps/717d5ce4c24342379459d3c7d4815ae8/completion"
     private let messageHistoryActor: MessageHistoryActor
     
     private init() {
@@ -53,9 +62,9 @@ final class StreamingAPIManager: @unchecked Sendable {
     func streamChatRequest(userMessage: String) async throws -> AsyncThrowingStream<String, Error> {
         print("StreamingAPIManager: 准备发起请求，userMessage: \(userMessage)")
         
-        // 1. 添加用户消息到历史
+        // 1. 添加用户消息到历史并获取完整历史
         await addToHistory(role: "user", content: userMessage)
-        let messages = await getMessageHistory() + [["role": "user", "content": userMessage]]
+        let messages = await getMessageHistory()
         
         // 2. 构建请求体（和千问一致）
         let requestBody: [String: Any] = [

@@ -9,39 +9,62 @@ struct ChatHistoryView: View {
     
     var body: some View {
         ZStack {
-            Color.orange.opacity(0.1).ignoresSafeArea()
+            // 背景
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 255/255, green: 255/255, blue: 255/255),
+                    Color(red: 250/255, green: 250/255, blue: 250/255)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
             
-            VStack {
+            VStack(spacing: 0) {
                 // 顶部导航栏
                 HStack {
                     Button(action: {
-                        // 直接返回到根视图
                         presentationMode.wrappedValue.dismiss()
                     }) {
                         Image(systemName: "chevron.left")
                             .font(.title2)
-                            .foregroundColor(.orange)
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                            )
                     }
                     
                     Spacer()
                     
                     Text("聊天历史")
-                        .font(.headline)
-                        .foregroundColor(.orange)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                     
                     Spacer()
                     
-                    Button(action: {
-                        if !historyManager.chatSessions.isEmpty {
+                    if !historyManager.chatSessions.isEmpty {
+                        Button(action: {
                             showingClearAlert = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.title2)
+                                .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                                .padding(8)
+                                .background(
+                                    Circle()
+                                        .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                                )
                         }
-                    }) {
-                        Image(systemName: "trash")
-                            .font(.title2)
-                            .foregroundColor(.orange)
                     }
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(
+                    Color.white
+                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+                )
                 
                 if historyManager.chatSessions.isEmpty {
                     VStack(spacing: 20) {
@@ -55,30 +78,36 @@ struct ChatHistoryView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List {
-                        ForEach(historyManager.chatSessions) { session in
-                            NavigationLink(destination: ChatDetailView(session: session)) {
-                                ChatSessionRow(session: session)
-                            }
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    selectedSession = session
-                                    showingDeleteAlert = true
-                                } label: {
-                                    Label("删除", systemImage: "trash")
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(historyManager.chatSessions.sorted(by: { $0.startTime > $1.startTime })) { session in
+                                NavigationLink(destination: ChatDetailView(session: session)) {
+                                    ChatSessionRow(session: session)
+                                }
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        selectedSession = session
+                                        showingDeleteAlert = true
+                                    } label: {
+                                        Label("删除", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
-                        .onDelete { indexSet in
-                            historyManager.removeChatSession(at: indexSet)
-                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     }
-                    .listStyle(PlainListStyle())
                 }
             }
         }
         .navigationBarHidden(true)
-        .interactiveDismissDisabled(false) // 确保支持左滑返回
+        .interactiveDismissDisabled()
+        .onAppear {
+            // 确保在视图出现时加载聊天历史
+            Task {
+                await historyManager.loadChatSessions()
+            }
+        }
         .alert("删除对话", isPresented: $showingDeleteAlert) {
             Button("取消", role: .cancel) { }
             Button("删除", role: .destructive) {
@@ -136,6 +165,10 @@ struct ChatSessionRow: View {
             }
         }
         .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
 }
 
@@ -145,19 +178,61 @@ struct ChatDetailView: View {
     
     var body: some View {
         ZStack {
-            Color.orange.opacity(0.1).ignoresSafeArea()
+            // 背景
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 255/255, green: 255/255, blue: 255/255),
+                    Color(red: 250/255, green: 250/255, blue: 250/255)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
             
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
-                    ForEach(session.messages) { message in
-                        MessageBubble(message: message)
+            VStack(spacing: 0) {
+                // 顶部导航栏
+                HStack {
+                    Button(action: {
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .font(.title2)
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                            )
                     }
+                    
+                    Spacer()
+                    
+                    Text(session.title)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    
+                    Spacer()
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(
+                    Color.white
+                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+                )
+                
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        ForEach(session.messages) { message in
+                            MessageBubble(message: message)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
             }
         }
-        .navigationBarTitle(session.title, displayMode: .inline)
-        .interactiveDismissDisabled(false) // 确保支持左滑返回
+        .navigationBarHidden(true)
+        .interactiveDismissDisabled()
     }
 }
 

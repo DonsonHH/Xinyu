@@ -65,16 +65,6 @@ struct SettingsView: View {
                 }
             }
             
-            NavigationLink(destination: APISettingsView()) {
-                HStack {
-                    Image(systemName: "gear")
-                        .foregroundColor(.orange)
-                        .font(.title2)
-                    Text("API 设置")
-                        .font(.headline)
-                }
-            }
-            
             NavigationLink(destination: PrivacyPolicyView()) {
                 HStack {
                     Image(systemName: "lock.shield.fill")
