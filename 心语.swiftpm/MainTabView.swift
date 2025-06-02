@@ -45,7 +45,7 @@ struct MainTabView: View {
                 )
             }
             
-            // 页面指示器 - 使用 ZStack 确保始终在底部居中
+            // 页面指示器
             VStack {
                 Spacer()
                 HStack(spacing: 12) {
@@ -73,13 +73,12 @@ struct MainTabView: View {
             if showOnboarding {
                 OnboardingView(isPresented: $showOnboarding)
                     .transition(.opacity)
-                    .zIndex(100) // 确保始终在最上层
+                    .zIndex(100)
             }
         }
         .background(themeManager.globalBackgroundColor)
         .edgesIgnoringSafeArea(.all)
         .onAppear {
-            // 检查是否需要显示引导流程
             showOnboarding = !profileManager.isOnboardingCompleted()
         }
     }

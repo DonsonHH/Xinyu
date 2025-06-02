@@ -1,7 +1,7 @@
 import SwiftUI
 
 @MainActor
-final class ThemeManager: ObservableObject, @unchecked Sendable {
+final class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
     
     @AppStorage("isDarkMode") private var isDarkMode = false
@@ -9,6 +9,13 @@ final class ThemeManager: ObservableObject, @unchecked Sendable {
     
     @Published var globalBackgroundColor: Color = Color.orange.opacity(0.1)
     @Published var currentEmotion: String = "平静"
+    
+    var textColor: Color {
+        if followSystem {
+            return .primary
+        }
+        return isDarkMode ? .white : .black
+    }
     
     private init() {}
     

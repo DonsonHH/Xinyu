@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum APIError: Error {
     case invalidURL
@@ -12,10 +13,18 @@ enum APIError: Error {
 @available(iOS 15.0, *)
 private actor MessageHistoryActor {
     private var messageHistory: [[String: String]] = []
-    private let maxHistoryLength: Int
+    private var maxHistoryLength: Int
     
     init(maxHistoryLength: Int) {
         self.maxHistoryLength = maxHistoryLength
+    }
+    
+    func updateMaxHistoryLength(_ newLength: Int) {
+        self.maxHistoryLength = newLength
+        // 如果当前历史记录超过新的长度限制，删除多余的消息
+        while messageHistory.count > maxHistoryLength {
+            messageHistory.removeFirst()
+        }
     }
     
     func addMessage(role: String, content: String) {
@@ -38,13 +47,76 @@ private actor MessageHistoryActor {
 final class StreamingAPIManager: @unchecked Sendable {
     static let shared = StreamingAPIManager()
     
-    // 千问API配置（和QianwenService一致，直接写死）
+    // 千问API配置
     private let apiKey = "sk-2b0120253a5c4a06bba8a9e4164dea9a"
     private let baseURL = "https://dashscope.aliyuncs.com/api/v1/apps/717d5ce4c24342379459d3c7d4815ae8/completion"
     private let messageHistoryActor: MessageHistoryActor
     
+    // 用户配置
+    private var maxHistoryLength: Int {
+        get { UserDefaults.standard.integer(forKey: "maxHistoryLength") }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "maxHistoryLength")
+            Task {
+                await messageHistoryActor.updateMaxHistoryLength(newValue)
+            }
+        }
+    }
+    private var temperature: Double {
+        get { UserDefaults.standard.double(forKey: "temperature") }
+        set { UserDefaults.standard.set(newValue, forKey: "temperature") }
+    }
+    private var systemPrompt: String {
+        get { UserDefaults.standard.string(forKey: "systemPrompt") ?? "你是一个情绪管理助手，帮助用户管理情绪。" }
+        set { UserDefaults.standard.set(newValue, forKey: "systemPrompt") }
+    }
+    private var incrementalOutput: Bool {
+        get { UserDefaults.standard.bool(forKey: "incrementalOutput") }
+        set { UserDefaults.standard.set(newValue, forKey: "incrementalOutput") }
+    }
+    private var topP: Double {
+        get { UserDefaults.standard.double(forKey: "topP") }
+        set { UserDefaults.standard.set(newValue, forKey: "topP") }
+    }
+    private var topK: Int {
+        get { UserDefaults.standard.integer(forKey: "topK") }
+        set { UserDefaults.standard.set(newValue, forKey: "topK") }
+    }
+    private var maxTokens: Int {
+        get { UserDefaults.standard.integer(forKey: "maxTokens") }
+        set { UserDefaults.standard.set(newValue, forKey: "maxTokens") }
+    }
+    
     private init() {
-        self.messageHistoryActor = MessageHistoryActor(maxHistoryLength: 10)
+        // 从 UserDefaults 获取初始值，如果不存在则使用默认值
+        let initialMaxHistoryLength = UserDefaults.standard.integer(forKey: "maxHistoryLength")
+        let defaultMaxHistoryLength = initialMaxHistoryLength > 0 ? initialMaxHistoryLength : 10
+        
+        // 初始化 messageHistoryActor
+        self.messageHistoryActor = MessageHistoryActor(maxHistoryLength: defaultMaxHistoryLength)
+        
+        // 设置默认值（如果尚未设置）
+        if initialMaxHistoryLength == 0 {
+            UserDefaults.standard.set(10, forKey: "maxHistoryLength")
+        }
+        if UserDefaults.standard.double(forKey: "temperature") == 0 {
+            UserDefaults.standard.set(0.7, forKey: "temperature")
+        }
+        if UserDefaults.standard.string(forKey: "systemPrompt") == nil {
+            UserDefaults.standard.set("你是一个情绪管理助手，帮助用户管理情绪。", forKey: "systemPrompt")
+        }
+        if !UserDefaults.standard.bool(forKey: "incrementalOutput") {
+            UserDefaults.standard.set(true, forKey: "incrementalOutput")
+        }
+        if UserDefaults.standard.double(forKey: "topP") == 0 {
+            UserDefaults.standard.set(0.8, forKey: "topP")
+        }
+        if UserDefaults.standard.integer(forKey: "topK") == 0 {
+            UserDefaults.standard.set(50, forKey: "topK")
+        }
+        if UserDefaults.standard.integer(forKey: "maxTokens") == 0 {
+            UserDefaults.standard.set(2000, forKey: "maxTokens")
+        }
     }
     
     private func addToHistory(role: String, content: String) async {
@@ -56,7 +128,12 @@ final class StreamingAPIManager: @unchecked Sendable {
     }
     
     private func getMessageHistory() async -> [[String: String]] {
-        await messageHistoryActor.getHistory()
+        var messages = await messageHistoryActor.getHistory()
+        // 添加系统提示词
+        if !messages.contains(where: { $0["role"] == "system" }) {
+            messages.insert(["role": "system", "content": systemPrompt], at: 0)
+        }
+        return messages
     }
     
     func streamChatRequest(userMessage: String) async throws -> AsyncThrowingStream<String, Error> {
@@ -69,7 +146,13 @@ final class StreamingAPIManager: @unchecked Sendable {
         // 2. 构建请求体（和千问一致）
         let requestBody: [String: Any] = [
             "input": ["messages": messages],
-            "parameters": ["incremental_output": true]
+            "parameters": [
+                "incremental_output": incrementalOutput,
+                "temperature": temperature,
+                "top_p": topP,
+                "top_k": topK,
+                "max_tokens": maxTokens
+            ]
         ]
         
         guard let url = URL(string: baseURL) else {
@@ -167,5 +250,18 @@ final class StreamingAPIManager: @unchecked Sendable {
                 task.cancel()
             }
         }
+    }
+    
+    // 测试API连接
+    func testConnection() async throws -> Bool {
+        let testMessage = "测试连接"
+        let stream = try await streamChatRequest(userMessage: testMessage)
+        
+        for try await _ in stream {
+            // 只要收到任何响应就认为连接成功
+            return true
+        }
+        
+        return false
     }
 } 
