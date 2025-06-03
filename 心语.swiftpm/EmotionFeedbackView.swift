@@ -808,11 +808,11 @@ struct EmotionAnalysisView: View {
     @State private var emotionScore: Int = 75
     @State private var emotionDescription: String = "通过分析，你目前的情绪状态看起来平静。"
     @State private var recommendedSongs: [(title: String, artist: String, cover: String)] = [
-        ("起风了", "买辣椒也用券", "cover1"),
-        ("光年之外", "邓紫棋", "cover2"),
-        ("晴天", "周杰伦", "cover3"),
-        ("稻香", "周杰伦", "cover4"),
-        ("夜曲", "周杰伦", "cover5")
+        ("起风了", "买辣椒也用券", "music_cover_1"),
+        ("光年之外", "邓紫棋", "music_cover_2"),
+        ("晴天", "周杰伦", "music_cover_3"),
+        ("稻香", "周杰伦", "music_cover_4"),
+        ("夜曲", "周杰伦", "music_cover_5")
     ]
     @State private var showingARGuide = false
     @State private var showCameraPermissionAlert = false
@@ -953,217 +953,375 @@ struct EmotionAnalysisView: View {
                         .foregroundColor(.gray)
                     
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("根据您的HRV数据和情绪记录分析：")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.gray)
+                        // 情绪分析卡片
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "chart.bar.fill")
+                                    .foregroundColor(.orange)
+                                Text("情绪分析")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.gray)
+                            }
+                            
+                            Text("根据您的HRV数据和情绪记录分析：")
+                                .font(.system(size: 14))
+                                .foregroundColor(.gray)
+                            
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(Color.orange)
+                                        .frame(width: 6, height: 6)
+                                    Text("今日压力水平处于中等状态，建议适当放松")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.gray)
+                                }
+                                
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(Color.blue)
+                                        .frame(width: 6, height: 6)
+                                    Text("情绪波动较为平稳，但仍有提升空间")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.gray)
+                                }
+                                
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 6, height: 6)
+                                    Text("建议通过以下方式调节情绪：")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                         
-                        Text("• 今日压力水平处于中等状态，建议适当放松")
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
-                        
-                        Text("• 情绪波动较为平稳，但仍有提升空间")
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
-                        
-                        Text("• 建议通过以下方式调节情绪：")
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
-                    }
-                    .padding(.horizontal)
-                    
-                    // 音乐推荐卡片
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("推荐音乐")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.gray)
-                            .padding(.horizontal)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
+                        // 情绪趋势卡片
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "chart.line.uptrend.xyaxis")
+                                    .foregroundColor(.blue)
+                                Text("情绪趋势")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.gray)
+                            }
+                            
                             HStack(spacing: 15) {
-                                ForEach(recommendedSongs, id: \.title) { song in
-                                    Button(action: {
-                                        if let url = URL(string: "qqmusic://") {
-                                            UIApplication.shared.open(url)
-                                        }
-                                    }) {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            Image(song.cover)
-                                                .resizable()
-                                                .scaledToFill()
-                                                .frame(width: 160, height: 160)
-                                                .cornerRadius(12)
-                                                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-                                            
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(song.title)
-                                                    .font(.system(size: 15, weight: .medium))
-                                                    .foregroundColor(.black)
-                                                    .lineLimit(1)
-                                                
-                                                Text(song.artist)
-                                                    .font(.system(size: 13))
-                                                    .foregroundColor(.gray)
-                                                    .lineLimit(1)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("早晨")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.gray)
+                                    Text("平静")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.blue)
+                                }
+                                
+                                Image(systemName: "arrow.right")
+                                    .foregroundColor(.gray)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("中午")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.gray)
+                                    Text("开心")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.orange)
+                                }
+                                
+                                Image(systemName: "arrow.right")
+                                    .foregroundColor(.gray)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("现在")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.gray)
+                                    Text("平静")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                        
+                        // 音乐推荐卡片
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Image(systemName: "music.note")
+                                    .foregroundColor(.purple)
+                                Text("推荐音乐")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.gray)
+                            }
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 15) {
+                                    ForEach(recommendedSongs, id: \.title) { song in
+                                        Button(action: {
+                                            if let url = URL(string: "qqmusic://") {
+                                                UIApplication.shared.open(url)
                                             }
-                                            .padding(.horizontal, 4)
+                                        }) {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                ZStack {
+                                                    // 默认封面背景
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .fill(
+                                                            LinearGradient(
+                                                                gradient: Gradient(colors: [
+                                                                    Color.purple.opacity(0.8),
+                                                                    Color.blue.opacity(0.6)
+                                                                ]),
+                                                                startPoint: .topLeading,
+                                                                endPoint: .bottomTrailing
+                                                            )
+                                                        )
+                                                        .frame(width: 160, height: 160)
+                                                    
+                                                    // 音乐图标
+                                                    Image(systemName: "music.note")
+                                                        .font(.system(size: 40))
+                                                        .foregroundColor(.white.opacity(0.8))
+                                                }
+                                                
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text(song.title)
+                                                        .font(.system(size: 15, weight: .medium))
+                                                        .foregroundColor(.black)
+                                                        .lineLimit(1)
+                                                    
+                                                    Text(song.artist)
+                                                        .font(.system(size: 13))
+                                                        .foregroundColor(.gray)
+                                                        .lineLimit(1)
+                                                }
+                                                .padding(.horizontal, 4)
+                                            }
+                                            .frame(width: 160)
+                                            .background(Color.white)
+                                            .cornerRadius(12)
+                                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                                         }
-                                        .frame(width: 160)
-                                        .background(Color.white)
-                                        .cornerRadius(12)
-                                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                                     }
                                 }
+                                .padding(.horizontal)
                             }
-                            .padding(.horizontal)
                         }
-                    }
-                    .padding(.vertical, 10)
-                    
-                    // 减压活动卡片组
-                    VStack(spacing: 12) {
-                        // 运动建议卡片
-                        Button(action: {
-                            if let url = URL(string: "keep://") {
-                                UIApplication.shared.open(url)
-                            }
-                        }) {
-                            HStack {
-                                Image(systemName: "figure.run")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.white)
-                                
-                                VStack(alignment: .leading) {
-                                    Text("运动减压")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.white)
-                                    
-                                    Text("推荐：瑜伽、冥想、慢跑")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.white.opacity(0.8))
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.white)
-                            }
-                            .padding()
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.orange, Color.orange.opacity(0.8)]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(15)
-                        }
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                         
-                        // 正念投影卡片
-                        Button(action: {
-                            startMindfulnessProjection()
-                        }) {
-                            HStack {
-                                Image(systemName: "person.fill.viewfinder")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.white)
-                                
-                                VStack(alignment: .leading) {
-                                    Text("正念投影")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.white)
-                                    
-                                    Text("AR冥想导师，实时呼吸引导")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.white.opacity(0.8))
+                        // 减压活动卡片组
+                        VStack(spacing: 12) {
+                            // 运动减压卡片
+                            Button(action: {
+                                if let url = URL(string: "keep://") {
+                                    UIApplication.shared.open(url)
                                 }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.white)
-                            }
-                            .padding()
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(15)
-                        }
-                        .sheet(isPresented: $showingARGuide) {
-                            ARMeditationGuideView()
-                        }
-                        
-                        // 冥想训练卡片
-                        Button(action: {
-                            if let url = URL(string: "keep://") {
-                                UIApplication.shared.open(url)
-                            }
-                        }) {
-                            HStack {
-                                Image(systemName: "brain.head.profile")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.white)
-                                
-                                VStack(alignment: .leading) {
-                                    Text("冥想训练")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.white)
+                            }) {
+                                HStack {
+                                    // 左侧内容
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "figure.run")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(.white)
+                                            
+                                            Text("运动减压")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(.white)
+                                        }
+                                        
+                                        Text("瑜伽 · 冥想 · 慢跑")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.white.opacity(0.8))
+                                    }
                                     
-                                    Text("专注当下，觉察情绪")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.white.opacity(0.8))
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.white)
-                            }
-                            .padding()
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.purple, Color.purple.opacity(0.8)]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(15)
-                        }
-                        
-                        // AI倾诉对话卡片
-                        NavigationLink(destination: VoiceInteractionView()) {
-                            HStack {
-                                Image(systemName: "bubble.left.and.bubble.right.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.white)
-                                
-                                VStack(alignment: .leading) {
-                                    Text("AI倾诉对话")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.white)
+                                    Spacer()
                                     
-                                    Text("与AI助手分享你的心情")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.white.opacity(0.8))
+                                    // 右侧装饰
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.white.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    }
                                 }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.white)
-                            }
-                            .padding()
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.green, Color.green.opacity(0.8)]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+                                .padding()
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color(red: 255/255, green: 159/255, blue: 10/255),
+                                            Color(red: 255/255, green: 149/255, blue: 0/255)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                                 )
-                            )
-                            .cornerRadius(15)
+                                .cornerRadius(16)
+                            }
+                            
+                            // 正念投影卡片
+                            Button(action: {
+                                startMindfulnessProjection()
+                            }) {
+                                HStack {
+                                    // 左侧内容
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "person.fill.viewfinder")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(.white)
+                                            
+                                            Text("正念投影")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(.white)
+                                        }
+                                        
+                                        Text("AR冥想导师 · 实时呼吸引导")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.white.opacity(0.8))
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // 右侧装饰
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.white.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                                .padding()
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color(red: 0/255, green: 122/255, blue: 255/255),
+                                            Color(red: 0/255, green: 102/255, blue: 235/255)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .cornerRadius(16)
+                            }
+                            .sheet(isPresented: $showingARGuide) {
+                                ARMeditationGuideView()
+                            }
+                            
+                            // 冥想训练卡片
+                            Button(action: {
+                                if let url = URL(string: "keep://") {
+                                    UIApplication.shared.open(url)
+                                }
+                            }) {
+                                HStack {
+                                    // 左侧内容
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "brain.head.profile")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(.white)
+                                            
+                                            Text("冥想训练")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(.white)
+                                        }
+                                        
+                                        Text("专注当下 · 觉察情绪")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.white.opacity(0.8))
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // 右侧装饰
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.white.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                                .padding()
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color(red: 175/255, green: 82/255, blue: 222/255),
+                                            Color(red: 155/255, green: 62/255, blue: 202/255)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .cornerRadius(16)
+                            }
+                            
+                            // AI倾诉对话卡片
+                            NavigationLink(destination: VoiceInteractionView()) {
+                                HStack {
+                                    // 左侧内容
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(.white)
+                                            
+                                            Text("AI倾诉对话")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(.white)
+                                        }
+                                        
+                                        Text("语音 · 文字 · 表情")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.white.opacity(0.8))
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // 右侧装饰
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.white.opacity(0.2))
+                                            .frame(width: 40, height: 40)
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                                .padding()
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color(red: 52/255, green: 199/255, blue: 89/255),
+                                            Color(red: 32/255, green: 179/255, blue: 69/255)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .cornerRadius(16)
+                            }
                         }
                     }
                     .padding(.horizontal)

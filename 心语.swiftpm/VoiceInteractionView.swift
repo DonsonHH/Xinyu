@@ -106,6 +106,10 @@ struct VoiceInteractionView: View {
         }
         .alert("保存对话", isPresented: $showingSaveAlert) {
             Button("取消", role: .cancel) { }
+            Button("不保存") {
+                stopListening()
+                presentationMode.wrappedValue.dismiss()
+            }
             Button("保存") {
                 saveCurrentSession()
                 showingSaveAlert = false
@@ -172,13 +176,8 @@ struct VoiceInteractionView: View {
                                 .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
                         )
                 }
-                
-                Button(action: {
-                    if !messages.isEmpty {
-                        showingSaveAlert = true
-                    }
-                }) {
-                    Image(systemName: "square.and.arrow.down")
+                NavigationLink(destination: VoiceSettingsView()) {
+                    Image(systemName: "gearshape.fill")
                         .font(.title2)
                         .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                         .padding(8)

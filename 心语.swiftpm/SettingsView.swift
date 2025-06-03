@@ -92,7 +92,7 @@ struct SettingsView: View {
         .navigationTitle("设置")
         .navigationBarTitleDisplayMode(.large)
         .listStyle(InsetGroupedListStyle())
-        .interactiveDismissDisabled(false)
+        .interactiveDismissDisabled()
         .background(themeManager.globalBackgroundColor)
     }
 }
@@ -218,6 +218,7 @@ struct VoiceSettingsView: View {
         .navigationTitle("对话设置")
         .navigationBarTitleDisplayMode(.large)
         .listStyle(InsetGroupedListStyle())
+        .interactiveDismissDisabled()
         .background(themeManager.globalBackgroundColor)
     }
     
@@ -476,6 +477,7 @@ struct PersonalizationView: View {
         .navigationTitle("个性化")
         .navigationBarTitleDisplayMode(.large)
         .listStyle(InsetGroupedListStyle())
+        .interactiveDismissDisabled()
         .background(themeManager.globalBackgroundColor)
     }
 }
@@ -533,7 +535,7 @@ struct PrivacyPolicyView: View {
         .background(themeManager.globalBackgroundColor)
         .navigationTitle("隐私政策")
         .navigationBarTitleDisplayMode(.large)
-        .interactiveDismissDisabled(false)
+        .interactiveDismissDisabled()
     }
 }
 
@@ -606,7 +608,7 @@ struct AboutView: View {
         .background(themeManager.globalBackgroundColor)
         .navigationTitle("关于")
         .navigationBarTitleDisplayMode(.large)
-        .interactiveDismissDisabled(false)
+        .interactiveDismissDisabled()
     }
 }
 
