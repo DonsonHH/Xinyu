@@ -66,6 +66,17 @@ struct MoodAnalysisView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         
+                        // NMO 游戏卡片
+                        NavigationLink(destination: NMOGameView()) {
+                            FunctionCard(
+                                title: "NMO 小游戏",
+                                description: "放松心情，开始游戏",
+                                iconName: "gamecontroller.fill",
+                                color: Color(red: 255/255, green: 159/255, blue: 10/255)
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
                         Spacer(minLength: 30)
                     }
                     .padding(.top, 10)  // 调整整体 VStack 的顶部间距

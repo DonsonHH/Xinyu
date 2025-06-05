@@ -494,11 +494,15 @@ struct VoiceInteractionView: View {
         
         do {
             let stream = try await StreamingAPIManager.shared.streamChatRequest(userMessage: content)
+            var accumulatedResponse = ""
             
             for try await chunk in stream {
                 await MainActor.run {
-                    currentResponse += chunk
+                    accumulatedResponse += chunk
+                    currentResponse = accumulatedResponse
                 }
+                // 添加小延迟使显示更自然
+                try await Task.sleep(nanoseconds: 10_000_000) // 10ms
             }
             
             await MainActor.run {
@@ -781,6 +785,7 @@ struct MessageBubble: View {
     let message: ChatMessage
     @State private var showActionBubble = false
     @State private var showingCopySuccess = false
+    @State private var displayedText = ""
     
     var body: some View {
         VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
@@ -826,7 +831,7 @@ struct MessageBubble: View {
                         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                     } else {
                         HStack(spacing: 8) {
-                            Text(message.content)
+                            Text(displayedText)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 12)
                                 .background(
@@ -846,6 +851,13 @@ struct MessageBubble: View {
                                 .foregroundColor(message.isUser ? .white : .black)
                                 .cornerRadius(20)
                                 .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                                .onAppear {
+                                    if !message.isUser {
+                                        animateText()
+                                    } else {
+                                        displayedText = message.content
+                                    }
+                                }
                             
                             if !message.isUser {
                                 Button(action: {
@@ -890,32 +902,26 @@ struct MessageBubble: View {
                 }
             }
         }
-        .overlay(
-            Group {
-                if showingCopySuccess {
-                    Text("已复制到剪贴板")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(20)
-                        .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showingCopySuccess)
-        )
     }
     
-    private func showCopySuccess() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            showingCopySuccess = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation {
-                showingCopySuccess = false
+    private func animateText() {
+        let text = message.content
+        var index = 0
+        
+        func animateNextCharacter() {
+            guard index < text.count else { return }
+            let endIndex = text.index(text.startIndex, offsetBy: index + 1)
+            displayedText = String(text[..<endIndex])
+            index += 1
+            
+            if index < text.count {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+                    animateNextCharacter()
+                }
             }
         }
+        
+        animateNextCharacter()
     }
 }
 

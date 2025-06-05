@@ -255,6 +255,39 @@ struct EmotionFeedbackView: View {
                             }
                         }
                         
+                        // 添加游戏卡片
+                        NavigationLink(destination: NMOGameView()) {
+                            VStack(spacing: 15) {
+                                HStack {
+                                    Image(systemName: "gamecontroller.fill")
+                                        .font(.title)
+                                        .foregroundColor(.orange)
+                                    
+                                    VStack(alignment: .leading) {
+                                        Text("NMO 小游戏")
+                                            .font(.headline)
+                                            .foregroundColor(.orange)
+                                        
+                                        Text("放松心情，开始游戏")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(Color.white)
+                                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                            )
+                            .padding(.horizontal)
+                        }
+                        
                         // 相机预览区域
                         if isCameraActive {
                             ZStack {
