@@ -199,6 +199,11 @@ struct VoiceInteractionView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 16)
             }
+            .background(Color.clear)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isTextFieldFocused = false
+            }
             .onChange(of: messages.count) { _ in
                 if let lastMessage = messages.last {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
