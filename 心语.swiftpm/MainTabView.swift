@@ -46,12 +46,6 @@ struct MainTabView: View {
             .accentColor(Color(red: 255/255, green: 159/255, blue: 10/255))
             .background(themeManager.globalBackgroundColor.ignoresSafeArea())
 
-            // 顶部分割线
-            Rectangle()
-                .fill(Color(UIColor(white: 0.85, alpha: 1)))
-                .frame(height: 1)
-                .edgesIgnoringSafeArea(.bottom)
-                .offset(y: -49)
         }
     }
 }

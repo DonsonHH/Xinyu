@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ChatHistoryView: View {
+    var onClose: (() -> Void)? = nil
     @StateObject private var historyManager = ChatHistoryManager.shared
     @State private var showingDeleteAlert = false
     @State private var selectedSession: ChatSession?
@@ -8,7 +9,7 @@ struct ChatHistoryView: View {
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             // 背景
             LinearGradient(
                 gradient: Gradient(colors: [
@@ -23,27 +24,32 @@ struct ChatHistoryView: View {
             VStack(spacing: 0) {
                 // 顶部导航栏
                 HStack {
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.title2)
-                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                            .padding(8)
-                            .background(
-                                Circle()
-                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
-                            )
+                    if let onClose = onClose {
+                        Button(action: { onClose() }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title)
+                                .foregroundColor(.gray)
+                                .padding(4)
+                        }
+                    } else {
+                        Button(action: {
+                            presentationMode.wrappedValue.dismiss()
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.title2)
+                                .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                                .padding(8)
+                                .background(
+                                    Circle()
+                                        .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                                )
+                        }
                     }
-                    
                     Spacer()
-                    
                     Text("聊天历史")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                    
                     Spacer()
-                    
                     if !historyManager.chatSessions.isEmpty {
                         Button(action: {
                             showingClearAlert = true

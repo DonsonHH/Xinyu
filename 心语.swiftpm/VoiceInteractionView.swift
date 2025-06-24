@@ -41,23 +41,64 @@ struct VoiceInteractionView: View {
     
     @Environment(\.presentationMode) var presentationMode
     
+    @State private var showingHistoryDrawer = false
+    
     // MARK: - 视图主体
     var body: some View {
         ZStack {
-            // 背景
+            // 温柔渐变背景
             LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 255/255, green: 255/255, blue: 255/255),
-                    Color(red: 250/255, green: 250/255, blue: 250/255)
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
+                gradient: Gradient(colors: [Color(red: 255/255, green: 245/255, blue: 235/255), Color(red: 255/255, green: 236/255, blue: 210/255)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // 顶部导航栏
-                navigationBar
+                // 顶部温情导航栏
+                HStack {
+                    Button(action: {
+                        withAnimation {
+                            showingHistoryDrawer = true
+                        }
+                    }) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.title2)
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                            )
+                    }
+                    Spacer()
+                    VStack(spacing: 2) {
+                        Text("温柔陪伴你的每一天")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    }
+                    Spacer()
+                    HStack(spacing: 16) {
+                        Button(action: {
+                            if !messages.isEmpty {
+                                showingNewChatAlert = true
+                            }
+                        }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                                .padding(8)
+                                .background(
+                                    Circle()
+                                        .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                                )
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.95))
+                .shadow(color: Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05), radius: 8, x: 0, y: 4)
                 
                 // 聊天消息列表
                 messageList
@@ -67,13 +108,30 @@ struct VoiceInteractionView: View {
                     transcriptionView
                 }
                 
-                // 文字输入区域
-                if isTextInputActive && !isListening {
-                    textInputView
+                // 微信风格底部输入区
+                wechatInputBar
+            }
+            
+            if showingHistoryDrawer {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation {
+                            showingHistoryDrawer = false
+                        }
+                    }
+                HStack {
+                    ChatHistoryView(onClose: {
+                        withAnimation {
+                            showingHistoryDrawer = false
+                        }
+                    })
+                    .frame(width: min(UIScreen.main.bounds.width * 0.8, 350))
+                    .background(Color.white)
+                    .transition(.move(edge: .leading))
+                    Spacer()
                 }
-                
-                // 底部交互控制区
-                bottomControlArea
+                .zIndex(100)
             }
         }
         .navigationBarHidden(true)
@@ -122,80 +180,6 @@ struct VoiceInteractionView: View {
     }
     
     // MARK: - 子视图
-    private var navigationBar: some View {
-        HStack {
-            Button(action: {
-                stopListening()
-                if !messages.isEmpty {
-                    showingSaveAlert = true
-                } else {
-                    presentationMode.wrappedValue.dismiss()
-                }
-            }) {
-                Image(systemName: "chevron.left")
-                    .font(.title2)
-                    .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                    .padding(8)
-                    .background(
-                        Circle()
-                            .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
-                    )
-            }
-            
-            Spacer()
-            
-            Text("实时交互")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-            
-            Spacer()
-            
-            HStack(spacing: 16) {
-                Button(action: {
-                    if !messages.isEmpty {
-                        showingNewChatAlert = true
-                    }
-                }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                        .padding(8)
-                        .background(
-                            Circle()
-                                .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
-                        )
-                }
-                
-                NavigationLink(destination: ChatHistoryView()) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.title2)
-                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                        .padding(8)
-                        .background(
-                            Circle()
-                                .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
-                        )
-                }
-                NavigationLink(destination: VoiceSettingsView()) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.title2)
-                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                        .padding(8)
-                        .background(
-                            Circle()
-                                .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
-                        )
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            Color.white
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-        )
-    }
-    
     private var messageList: some View {
         ScrollViewReader { scrollProxy in
             ScrollView {
@@ -255,177 +239,76 @@ struct VoiceInteractionView: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
     
-    private var textInputView: some View {
-        HStack {
-            TextField("输入消息...", text: $textInput)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+    // 微信风格底部输入区
+    private var wechatInputBar: some View {
+        HStack(spacing: 8) {
+            // 语音按钮
+            ZStack {
+                if isListening {
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color(red: 255/255, green: 236/255, blue: 210/255))
+                        .frame(width: 44, height: 44)
+                    Text("松开发送")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                } else {
+                    Button(action: {}) {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                            .frame(width: 44, height: 44)
+                    }
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        if !isListening {
+                            let generator = UIImpactFeedbackGenerator(style: .medium)
+                            generator.prepare()
+                            generator.impactOccurred()
+                            safelyCheckMicrophonePermission()
+                        }
+                    }
+                    .onEnded { _ in
+                        if isListening {
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.impactOccurred()
+                            stopListening()
+                            if let transcribedText = transcribedText, !transcribedText.isEmpty {
+                                sendMessage()
+                            }
+                        }
+                    }
+            )
+            // 输入框
+            TextField("说出你的心事或输入文字…", text: $textInput)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
                 .background(Color.white)
-                .cornerRadius(24)
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                .cornerRadius(20)
+                .shadow(color: Color.orange.opacity(0.05), radius: 2, x: 0, y: 1)
                 .focused($isTextFieldFocused)
-            
+            // 发送按钮
             Button(action: {
                 if !textInput.isEmpty {
                     sendTextMessage()
                 }
             }) {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    .font(.system(size: 28))
+                    .foregroundColor(textInput.isEmpty ? .gray : .white)
                     .background(
                         Circle()
-                            .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
-                            .frame(width: 44, height: 44)
+                            .fill(textInput.isEmpty ? Color.gray.opacity(0.2) : Color(red: 255/255, green: 159/255, blue: 10/255))
+                            .frame(width: 38, height: 38)
                     )
             }
+            .disabled(textInput.isEmpty)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-    }
-    
-    private var bottomControlArea: some View {
-        VStack {
-            HStack(spacing: 20) {
-                Button(action: {
-                    if isListening {
-                        stopListening()
-                    }
-                    isTextInputActive.toggle()
-                    if isTextInputActive {
-                        isTextFieldFocused = true
-                    }
-                }) {
-                    Image(systemName: isTextInputActive ? "mic" : "keyboard")
-                        .font(.system(size: 24))
-                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                        .padding(12)
-                        .background(
-                            Circle()
-                                .fill(Color.white.opacity(0.8))
-                                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-                        )
-                }
-                
-                if !isTextInputActive {
-                    voiceButton
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
-                Capsule()
-                    .fill(Color.clear)
-            )
-            .frame(width: 280, height: 60)
-            .padding(.bottom, 16)
-        }
         .background(Color.white)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: -4)
-    }
-    
-    private var voiceButton: some View {
-        ZStack {
-            if isListening {
-                rippleEffect
-            }
-            
-            Circle()
-                .fill(Color.white)
-                .frame(width: 70, height: 70)
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 3)
-            
-            Circle()
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color(red: 255/255, green: 159/255, blue: 10/255),
-                            Color(red: 255/255, green: 149/255, blue: 0/255)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 60, height: 60)
-            
-            Image(systemName: "waveform.circle.fill")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 30, height: 30)
-                .foregroundColor(.white)
-                .opacity(isListening ? 0.9 : 1.0)
-                .scaleEffect(isListening ? 1.1 : 1.0)
-                .animation(.easeInOut(duration: 0.5), value: isListening)
-        }
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !isListening {
-                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                        generator.prepare()
-                        generator.impactOccurred()
-                        safelyCheckMicrophonePermission()
-                        withAnimation {
-                            rippleScale1 = 1.4
-                            rippleScale2 = 1.2
-                            rippleScale3 = 1.3
-                        }
-                    }
-                }
-                .onEnded { _ in
-                    if isListening {
-                        let generator = UIImpactFeedbackGenerator(style: .light)
-                        generator.impactOccurred()
-                        stopListening()
-                        if let transcribedText = transcribedText, !transcribedText.isEmpty {
-                            sendMessage()
-                        }
-                        withAnimation {
-                            rippleScale1 = 1.0
-                            rippleScale2 = 1.0
-                            rippleScale3 = 1.0
-                        }
-                    }
-                }
-        )
-        .padding(.vertical, 15)
-    }
-    
-    private var rippleEffect: some View {
-        ZStack {
-            Circle()
-                .stroke(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.2), lineWidth: 1.5)
-                .frame(width: 120, height: 120)
-                .scaleEffect(rippleScale1)
-                .animation(
-                    Animation.easeInOut(duration: 2.0)
-                        .repeatForever(autoreverses: true)
-                        .delay(0.1),
-                    value: rippleScale1
-                )
-            
-            Circle()
-                .stroke(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.3), lineWidth: 2)
-                .frame(width: 100, height: 100)
-                .scaleEffect(rippleScale2)
-                .animation(
-                    Animation.easeInOut(duration: 1.2)
-                        .repeatForever(autoreverses: true),
-                    value: rippleScale2
-                )
-            
-            Circle()
-                .stroke(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.4), lineWidth: 3)
-                .frame(width: 90, height: 90)
-                .scaleEffect(rippleScale3)
-                .animation(
-                    Animation.easeInOut(duration: 1.5)
-                        .repeatForever(autoreverses: true)
-                        .delay(0.2),
-                    value: rippleScale3
-                )
-        }
     }
     
     private var successOverlay: some View {
@@ -788,120 +671,56 @@ struct MessageBubble: View {
     @State private var displayedText = ""
     
     var body: some View {
-        VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
-            HStack {
-                if message.isUser {
-                    Spacer()
-                }
-                
-                HStack(spacing: 12) {
-                    if !message.isUser {
-                        Image(systemName: "brain.head.profile")
-                            .resizable()
-                            .frame(width: 32, height: 32)
-                            .foregroundColor(Color(red: 90/255, green: 200/255, blue: 250/255))
-                            .background(
-                                Circle()
-                                    .fill(Color(red: 90/255, green: 200/255, blue: 250/255).opacity(0.1))
-                                    .frame(width: 40, height: 40)
-                            )
-                    }
-                    
-                    if message.isThinking {
-                        // 思考中动画
-                        HStack(spacing: 4) {
-                            ForEach(0..<3) { index in
-                                Circle()
-                                    .fill(Color(red: 90/255, green: 200/255, blue: 250/255))
-                                    .frame(width: 8, height: 8)
-                                    .opacity(0.6)
-                                    .scaleEffect(message.isThinking ? 1.2 : 0.8)
-                                    .animation(
-                                        Animation.easeInOut(duration: 0.6)
-                                            .repeatForever()
-                                            .delay(0.2 * Double(index)),
-                                        value: message.isThinking
-                                    )
-                            }
-                        }
-                        .padding(.horizontal, 16)
+        HStack(alignment: .top, spacing: 8) {
+            if message.isUser {
+                Spacer(minLength: 40)
+                VStack(alignment: .trailing) {
+                    Text(displayedText)
+                        .padding(.horizontal, 18)
                         .padding(.vertical, 12)
-                        .background(Color.white)
-                        .cornerRadius(20)
-                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                    } else {
-                        HStack(spacing: 8) {
-                            Text(displayedText)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                                .background(
-                                    message.isUser ?
-                                    AnyView(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [
-                                                Color(red: 255/255, green: 159/255, blue: 10/255),
-                                                Color(red: 255/255, green: 149/255, blue: 0/255)
-                                            ]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    ) :
-                                    AnyView(Color.white)
-                                )
-                                .foregroundColor(message.isUser ? .white : .black)
-                                .cornerRadius(20)
-                                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                                .onAppear {
-                                    if !message.isUser {
-                                        animateText()
-                                    } else {
-                                        displayedText = message.content
-                                    }
-                                }
-                            
-                            if !message.isUser {
-                                Button(action: {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        showActionBubble.toggle()
-                                    }
-                                }) {
-                                    Image(systemName: "ellipsis.circle")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(Color(red: 90/255, green: 200/255, blue: 250/255))
-                                        .padding(4)
-                                }
-                            }
+                        .background(
+                            LinearGradient(gradient: Gradient(colors: [Color(red: 255/255, green: 159/255, blue: 10/255), Color(red: 255/255, green: 200/255, blue: 100/255)]), startPoint: .top, endPoint: .bottom)
+                        )
+                        .foregroundColor(.white)
+                        .cornerRadius(22)
+                        .shadow(color: Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08), radius: 4, x: 0, y: 2)
+                        .onAppear {
+                            displayedText = message.content
                         }
-                    }
-                    
-                    if message.isUser {
-                        Image(systemName: "person.circle.fill")
-                            .resizable()
-                            .frame(width: 32, height: 32)
-                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                            .background(
-                                Circle()
-                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
-                                    .frame(width: 40, height: 40)
-                            )
-                    }
                 }
-                
-                if !message.isUser {
-                    Spacer()
+                Image(systemName: "person.crop.circle.fill")
+                    .resizable()
+                    .frame(width: 36, height: 36)
+                    .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+            } else {
+                Image("cat_avatar")
+                    .resizable()
+                    .frame(width: 36, height: 36)
+                    .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    .background(
+                        Circle()
+                            .fill(Color(red: 255/255, green: 236/255, blue: 210/255).opacity(0.5))
+                            .frame(width: 44, height: 44)
+                    )
+                VStack(alignment: .leading) {
+                    Text(displayedText)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 12)
+                        .background(
+                            LinearGradient(gradient: Gradient(colors: [Color(red: 255/255, green: 236/255, blue: 210/255), Color.white]), startPoint: .top, endPoint: .bottom)
+                        )
+                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                        .cornerRadius(22)
+                        .shadow(color: Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08), radius: 4, x: 0, y: 2)
+                        .onAppear {
+                            animateText()
+                        }
                 }
+                Spacer(minLength: 40)
             }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if showActionBubble {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    showActionBubble = false
-                }
-            }
-        }
     }
     
     private func animateText() {
