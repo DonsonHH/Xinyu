@@ -14,78 +14,59 @@ struct MoodAnalysisView: View {
     @ObservedObject private var themeManager = ThemeManager.shared
     // 添加用户资料管理器
     @ObservedObject private var profileManager = UserProfileManager.shared
+    @State private var showingProfile = false
+    @State private var showingSettings = false
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                // 使用全局背景颜色
-                themeManager.globalBackgroundColor
+        ZStack {
+            themeManager.globalBackgroundColor
                 .edgesIgnoringSafeArea(.all)
-                    .animation(.easeInOut(duration: 0.5), value: themeManager.globalBackgroundColor)
-                
+                .animation(.easeInOut(duration: 0.5), value: themeManager.globalBackgroundColor)
+            VStack(spacing: 0) {
+                // 顶部栏
+                HStack {
+                    NavigationLink(destination: ProfileView()) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.title2)
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                            )
+                    }
+                    Spacer()
+                    Text("我的")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    Spacer()
+                    NavigationLink(destination: SettingsView()) {
+                        Image(systemName: "gear")
+                            .font(.title2)
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                            )
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.95))
+                .shadow(color: Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05), radius: 8, x: 0, y: 4)
+                // 主体内容
                 ScrollView {
-                    // 添加顶部空间
                     Spacer(minLength: 40)
-                    
                     VStack(spacing: 25) {
                         // 今日情绪卡片
                         emotionCard
-                        
-                        // 新增的三个卡片
-                        
-                        // 开始交流卡片
-                        NavigationLink(destination: VoiceInteractionView()) {
-                            FunctionCard(
-                                title: "开始交流",
-                                description: "与心语AI助手开始对话，分享你的想法和感受",
-                                iconName: "bubble.left.and.bubble.right.fill",
-                                color: Color(red: 255/255, green: 159/255, blue: 10/255)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        // 个人信息卡片
-                        NavigationLink(destination: ProfileView()) {
-                            FunctionCard(
-                                title: "个人信息",
-                                description: "查看和编辑你的个人资料，管理你的账户信息",
-                                iconName: "person.fill",
-                                color: Color(red: 64/255, green: 156/255, blue: 255/255)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        // 设置卡片
-                        NavigationLink(destination: SettingsView()) {
-                            FunctionCard(
-                                title: "设置",
-                                description: "调整应用的外观和行为，管理隐私和通知设置",
-                                iconName: "gear",
-                                color: Color(red: 142/255, green: 142/255, blue: 147/255)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        // NMO 游戏卡片
-                        NavigationLink(destination: NMOGameView()) {
-                            FunctionCard(
-                                title: "NMO 小游戏",
-                                description: "放松心情，开始游戏",
-                                iconName: "gamecontroller.fill",
-                                color: Color(red: 255/255, green: 159/255, blue: 10/255)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
                         Spacer(minLength: 30)
                     }
-                    .padding(.top, 10)  // 调整整体 VStack 的顶部间距
+                    .padding(.top, 10)
                     .padding(.bottom, 20)
                 }
-                .edgesIgnoringSafeArea(.top)  // 确保滚动区域扩展到顶部安全区域外
             }
-            .navigationBarHidden(true)
-            .edgesIgnoringSafeArea(.all)
         }
         .onAppear {
             // 同步当前情绪状态

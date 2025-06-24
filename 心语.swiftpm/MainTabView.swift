@@ -38,12 +38,14 @@ struct MainTabView: View {
                     Text("放松室")
                 }
                 .tag(2)
-                MoodAnalysisView()
-                    .tabItem {
-                        Image(systemName: "person.crop.circle")
-                        Text("我的")
-                    }
-                    .tag(3)
+                NavigationView {
+                    MoodAnalysisView()
+                }
+                .tabItem {
+                    Image(systemName: "person.crop.circle")
+                    Text("我的")
+                }
+                .tag(3)
             }
             .accentColor(Color(red: 255/255, green: 159/255, blue: 10/255))
             .background(themeManager.globalBackgroundColor.ignoresSafeArea())
