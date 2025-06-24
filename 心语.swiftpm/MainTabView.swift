@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @ObservedObject private var themeManager = ThemeManager.shared
-    @State private var selectedTab = 0
+    @StateObject private var tabSelection = TabSelection()
     
     init() {
         let appearance = UITabBarAppearance()
@@ -17,7 +17,7 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
+            TabView(selection: $tabSelection.selectedTab) {
                 ContentView()
                     .tabItem {
                         Image(systemName: "sun.max.fill")
@@ -30,12 +30,14 @@ struct MainTabView: View {
                         Text("倾听")
                     }
                     .tag(1)
-                RelaxRoomView()
-                    .tabItem {
-                        Image(systemName: "face.smiling")
-                        Text("放松室")
-                    }
-                    .tag(2)
+                NavigationView {
+                    RelaxRoomView()
+                }
+                .tabItem {
+                    Image(systemName: "face.smiling")
+                    Text("放松室")
+                }
+                .tag(2)
                 MoodAnalysisView()
                     .tabItem {
                         Image(systemName: "person.crop.circle")
@@ -45,8 +47,8 @@ struct MainTabView: View {
             }
             .accentColor(Color(red: 255/255, green: 159/255, blue: 10/255))
             .background(themeManager.globalBackgroundColor.ignoresSafeArea())
-
         }
+        .environmentObject(tabSelection)
     }
 }
 
@@ -54,4 +56,8 @@ struct MainTabView_Previews: PreviewProvider {
     static var previews: some View {
         MainTabView()
     }
+}
+
+class TabSelection: ObservableObject {
+    @Published var selectedTab: Int = 0
 } 
