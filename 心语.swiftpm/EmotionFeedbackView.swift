@@ -604,6 +604,9 @@ struct EmotionFeedbackView: View {
     
     // 请求语音识别权限
     private func requestSpeechRecognitionPermission() {
+#if targetEnvironment(simulator)
+    print("模拟器不支持语音识别功能")
+#else
         SFSpeechRecognizer.requestAuthorization { status in
             switch status {
             case .authorized:
@@ -618,6 +621,7 @@ struct EmotionFeedbackView: View {
                 print("Speech recognition unknown status")
             }
         }
+#endif
     }
     
     // 开始语音识别

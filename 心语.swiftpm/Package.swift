@@ -16,7 +16,7 @@ let package = Package(
         .iOSApplication(
             name: "666",
             targets: ["AppModule"],
-            teamIdentifier: "6X33Y62X4Q",
+            teamIdentifier: "8QS9TN9HKL",
             displayVersion: "1.0",
             bundleVersion: "1",
             appIcon: .placeholder(icon: .cat),
