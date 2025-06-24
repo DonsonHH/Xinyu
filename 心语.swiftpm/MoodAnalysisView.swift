@@ -83,63 +83,59 @@ struct MoodAnalysisView: View {
     
     // 今日情绪卡片
     private var emotionCard: some View {
-        NavigationLink(destination: MoodDiaryView()) {
-            VStack(spacing: 15) {
-                Text("今日情绪")
-                    .font(.system(size: 20, weight: .medium, design: .rounded))
-                    .foregroundColor(.gray)
-                
-                Text(todayMood.mood)
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                
-                // 情绪分数环形进度条
-                ZStack {
-                    Circle()
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 8)
-                        .frame(width: 100, height: 100)
-                    
-                    Circle()
-                        .trim(from: 0, to: CGFloat(todayMood.score) / 100)
-                        .stroke(
-                            Color(red: 255/255, green: 159/255, blue: 10/255),
-                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                        )
-                        .frame(width: 100, height: 100)
-                        .rotationEffect(.degrees(-90))
-                    
-                    Text("\(todayMood.score)")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+        VStack(spacing: 18) {
+            NavigationLink(destination: MoodDiaryView()) {
+                VStack(spacing: 15) {
+                    Text("今日情绪")
+                        .font(.system(size: 20, weight: .medium, design: .rounded))
+                        .foregroundColor(.gray)
+                    Text(todayMood.mood)
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 8)
+                            .frame(width: 100, height: 100)
+                        Circle()
+                            .trim(from: 0, to: CGFloat(todayMood.score) / 100)
+                            .stroke(
+                                Color(red: 255/255, green: 159/255, blue: 10/255),
+                                style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                            )
+                            .frame(width: 100, height: 100)
+                            .rotationEffect(.degrees(-90))
+                        Text("\(todayMood.score)")
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    }
+                    Text(todayMood.description)
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    HStack {
+                        Text("查看心情手帐")
+                            .font(.system(size: 14, design: .rounded))
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    }
+                    .padding(.top, 5)
                 }
-                
-                Text(todayMood.description)
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                
-                // 添加一个查看历史的小提示
-                HStack {
-                    Text("查看心情手帐")
-                        .font(.system(size: 14, design: .rounded))
-                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12))
-                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                }
-                .padding(.top, 5)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                )
             }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-            )
-            .padding(.horizontal)
+            .buttonStyle(PlainButtonStyle())
+            // 日历视图区块
+            EmotionCalendarView()
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 16)
     }
     
     // 根据情绪返回相应的分数
@@ -233,5 +229,107 @@ struct MoodData {
 struct MoodAnalysisView_Previews: PreviewProvider {
     static var previews: some View {
         MoodAnalysisView()
+    }
+}
+
+// 在文件末尾添加EmotionCalendarView组件
+struct EmotionCalendarView: View {
+    // 示例数据：日期-emoji
+    let emotionMap: [Int: String] = [
+        17: "😊", 18: "😊", 19: "😊", 20: "😊", 21: "😊",
+        22: "🐱", 23: "😊", 24: "😊"
+    ]
+    let today = Calendar.current.component(.day, from: Date())
+    let weekSymbols = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+    let daysInMonth: Int
+    let firstWeekday: Int
+    init() {
+        let calendar = Calendar.current
+        let date = Date()
+        let range = calendar.range(of: .day, in: .month, for: date) ?? 1..<31
+        daysInMonth = range.count
+        let comps = calendar.dateComponents([.year, .month], from: date)
+        let firstDay = calendar.date(from: comps) ?? date
+        firstWeekday = calendar.component(.weekday, from: firstDay) - 1 // 0=周日
+    }
+    @State private var selectedDay: Int? = Calendar.current.component(.day, from: Date())
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("日历视图")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(Color(red: 30/255, green: 40/255, blue: 90/255))
+                Spacer()
+            }
+            .padding(.horizontal, 6)
+            // 星期标题
+            HStack(spacing: 0) {
+                ForEach(weekSymbols, id: \ .self) { w in
+                    Text(w)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(Color(red: 30/255, green: 40/255, blue: 90/255))
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            // 日历主体
+            let total = daysInMonth + firstWeekday
+            let rows = Int(ceil(Double(total) / 7.0))
+            VStack(spacing: 6) {
+                ForEach(0..<rows, id: \ .self) { row in
+                    HStack(spacing: 0) {
+                        ForEach(0..<7, id: \ .self) { col in
+                            let day = row * 7 + col - firstWeekday + 1
+                            Group {
+                                if row == 0 && col < firstWeekday || day < 1 || day > daysInMonth {
+                                    // 空白
+                                    Circle()
+                                        .fill(Color.gray.opacity(0.08))
+                                        .frame(width: 32, height: 32)
+                                        .overlay(
+                                            Text("")
+                                        )
+                                        .frame(maxWidth: .infinity)
+                                } else {
+                                    let emoji = emotionMap[day] ?? ""
+                                    Button(action: {
+                                        selectedDay = day
+                                    }) {
+                                        ZStack {
+                                            if selectedDay == day {
+                                                Circle()
+                                                    .fill(Color(red: 60/255, green: 120/255, blue: 255/255))
+                                                    .frame(width: 32, height: 32)
+                                            } else {
+                                                Circle()
+                                                    .fill(Color.white)
+                                                    .frame(width: 32, height: 32)
+                                            }
+                                            if emoji.isEmpty {
+                                                Text("\(day)")
+                                                    .font(.system(size: 15, weight: .medium))
+                                                    .foregroundColor(selectedDay == day ? .white : Color(red: 30/255, green: 40/255, blue: 90/255))
+                                            } else {
+                                                Text(emoji)
+                                                    .font(.system(size: 24))
+                                            }
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .frame(maxWidth: .infinity)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.top, 2)
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        )
     }
 } 
