@@ -62,7 +62,7 @@ final class ChatHistoryManager: ObservableObject {
             摘要：xxx
             """
             
-            let stream = try await StreamingAPIManager.shared.streamChatRequest(userMessage: prompt)
+            let stream = try await StreamingAPIManager.shared.streamChatRequestOnce(userMessage: prompt)
             var response = ""
             
             for try await chunk in stream {

@@ -340,6 +340,8 @@ struct VoiceInteractionView: View {
     
     private func cleanupView() {
         stopListening()
+        print("[DEBUG] 调用 saveCurrentSession at cleanupView")
+
         saveSessionOnDisappear()
     }
     
@@ -420,6 +422,7 @@ struct VoiceInteractionView: View {
     // MARK: - 会话管理
     private func startNewChat() {
         if !messages.isEmpty {
+            print("[DEBUG] 调用 saveCurrentSession at startNewChat")
             saveCurrentSession()
         }
         
