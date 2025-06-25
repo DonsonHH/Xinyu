@@ -36,7 +36,7 @@ struct MoodAnalysisView: View {
                             )
                     }
                     Spacer()
-                    Text("我的")
+                    Text("心迹")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                     Spacer()

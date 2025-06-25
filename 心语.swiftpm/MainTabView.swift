@@ -43,7 +43,7 @@ struct MainTabView: View {
                 }
                 .tabItem {
                     Image(systemName: "person.crop.circle")
-                    Text("我的")
+                    Text("心迹")
                 }
                 .tag(3)
             }
