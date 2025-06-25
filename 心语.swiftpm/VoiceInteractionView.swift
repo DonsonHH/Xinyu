@@ -673,14 +673,13 @@ struct MessageBubble: View {
     let message: ChatMessage
     @State private var showActionBubble = false
     @State private var showingCopySuccess = false
-    @State private var displayedText = ""
     
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             if message.isUser {
                 Spacer(minLength: 40)
                 VStack(alignment: .trailing) {
-                    Text(displayedText)
+                    Text(message.content)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 12)
                         .background(
@@ -689,9 +688,6 @@ struct MessageBubble: View {
                         .foregroundColor(.white)
                         .cornerRadius(22)
                         .shadow(color: Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08), radius: 4, x: 0, y: 2)
-                        .onAppear {
-                            displayedText = message.content
-                        }
                 }
                 Image(systemName: "person.crop.circle.fill")
                     .resizable()
@@ -708,7 +704,7 @@ struct MessageBubble: View {
                             .frame(width: 44, height: 44)
                     )
                 VStack(alignment: .leading) {
-                    Text(displayedText)
+                    Text(message.content)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 12)
                         .background(
@@ -717,35 +713,12 @@ struct MessageBubble: View {
                         .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                         .cornerRadius(22)
                         .shadow(color: Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08), radius: 4, x: 0, y: 2)
-                        .onAppear {
-                            animateText()
-                        }
                 }
                 Spacer(minLength: 40)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-    }
-    
-    private func animateText() {
-        let text = message.content
-        var index = 0
-        
-        func animateNextCharacter() {
-            guard index < text.count else { return }
-            let endIndex = text.index(text.startIndex, offsetBy: index + 1)
-            displayedText = String(text[..<endIndex])
-            index += 1
-            
-            if index < text.count {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-                    animateNextCharacter()
-                }
-            }
-        }
-        
-        animateNextCharacter()
     }
 }
 
