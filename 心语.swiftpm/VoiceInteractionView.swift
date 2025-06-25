@@ -257,7 +257,9 @@ struct VoiceInteractionView: View {
                         .font(.system(size: 14))
                         .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                 } else {
-                    Button(action: {}) {
+                    Button(action: {
+                        safelyCheckMicrophonePermission()
+                    }) {
                         Image(systemName: "mic.fill")
                             .font(.system(size: 22))
                             .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
@@ -584,6 +586,10 @@ struct VoiceInteractionView: View {
     }
     
     private func startListening() {
+        if audioEngine.isRunning {
+            audioEngine.stop()
+            audioEngine.inputNode.removeTap(onBus: 0)
+        }
         guard let speechRecognizer = speechRecognizer, speechRecognizer.isAvailable else {
             showError("语音识别器不可用，请稍后再试。")
             return
@@ -602,6 +608,16 @@ struct VoiceInteractionView: View {
             }
             
             let inputNode = audioEngine.inputNode
+            let hwFormat = inputNode.inputFormat(forBus: 0)
+            if hwFormat.channelCount == 0 || hwFormat.sampleRate == 0 {
+                showError("音频输入不可用，请在真机上测试并检查麦克风权限")
+                return
+            }
+            inputNode.removeTap(onBus: 0)
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: nil) { buffer, _ in
+                self.recognitionRequest?.append(buffer)
+            }
+            
             recognitionRequest.shouldReportPartialResults = true
             
             recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { result, error in
@@ -610,6 +626,7 @@ struct VoiceInteractionView: View {
                 if let result = result {
                     Task { @MainActor in
                         transcribedText = result.bestTranscription.formattedString
+                        textInput = result.bestTranscription.formattedString
                     }
                     isFinal = result.isFinal
                 }
@@ -633,11 +650,6 @@ struct VoiceInteractionView: View {
                         print("语音识别错误: \(error.localizedDescription)")
                     }
                 }
-            }
-            
-            let recordingFormat = inputNode.outputFormat(forBus: 0)
-            inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
-                self.recognitionRequest?.append(buffer)
             }
             
             audioEngine.prepare()
