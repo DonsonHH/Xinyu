@@ -6,8 +6,13 @@ struct MainTabView: View {
     
     init() {
         let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = .white
+        appearance.configureWithDefaultBackground()
+        if #available(iOS 15.0, *) {
+            appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+        }
+        // 主题色融合，提升 liquid glass 质感
+        let uiColor = UIColor(themeManager.globalBackgroundColor)
+        appearance.backgroundColor = uiColor.withAlphaComponent(0.4)
         appearance.shadowColor = UIColor(white: 0.85, alpha: 1)
         UITabBar.appearance().standardAppearance = appearance
         if #available(iOS 15.0, *) {
@@ -16,40 +21,38 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $tabSelection.selectedTab) {
-                ContentView()
-                    .tabItem {
-                        Image(systemName: "sun.max.fill")
-                        Text("今天")
-                    }
-                    .tag(0)
-                VoiceInteractionView()
-                    .tabItem {
-                        Image(systemName: "waveform")
-                        Text("倾听")
-                    }
-                    .tag(1)
-                NavigationView {
-                    RelaxRoomView()
-                }
+        TabView(selection: $tabSelection.selectedTab) {
+            ContentView()
                 .tabItem {
-                    Image(systemName: "face.smiling")
-                    Text("放松室")
+                    Image(systemName: "sun.max.fill")
+                    Text("今天")
                 }
-                .tag(2)
-                NavigationView {
-                    MoodAnalysisView()
-                }
+                .tag(0)
+            VoiceInteractionView()
                 .tabItem {
-                    Image(systemName: "person.crop.circle")
-                    Text("心迹")
+                    Image(systemName: "waveform")
+                    Text("倾听")
                 }
-                .tag(3)
+                .tag(1)
+            NavigationView {
+                RelaxRoomView()
             }
-            .accentColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-            .background(themeManager.globalBackgroundColor.ignoresSafeArea())
+            .tabItem {
+                Image(systemName: "face.smiling")
+                Text("放松室")
+            }
+            .tag(2)
+            NavigationView {
+                MoodAnalysisView()
+            }
+            .tabItem {
+                Image(systemName: "person.crop.circle")
+                Text("心迹")
+            }
+            .tag(3)
         }
+        .accentColor(Color.orange)
+        .background(themeManager.globalBackgroundColor.ignoresSafeArea())
         .environmentObject(tabSelection)
     }
 }
