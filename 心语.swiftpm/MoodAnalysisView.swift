@@ -32,8 +32,13 @@ struct MoodAnalysisView: View {
                             .padding(8)
                             .background(
                                 Circle()
-                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                                    .fill(.ultraThinMaterial)
+                                    .background(themeManager.globalBackgroundColor.opacity(0.15))
                             )
+                            .overlay(
+                                Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                     }
                     Spacer()
                     Text("心迹")
@@ -47,8 +52,13 @@ struct MoodAnalysisView: View {
                             .padding(8)
                             .background(
                                 Circle()
-                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                                    .fill(.ultraThinMaterial)
+                                    .background(themeManager.globalBackgroundColor.opacity(0.15))
                             )
+                            .overlay(
+                                Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                     }
                 }
                 .padding(.horizontal, 16)

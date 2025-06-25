@@ -11,14 +11,7 @@ struct ChatHistoryView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             // 背景
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 255/255, green: 255/255, blue: 255/255),
-                    Color(red: 250/255, green: 250/255, blue: 250/255)
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            Color(red: 255/255, green: 245/255, blue: 235/255)
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -27,9 +20,18 @@ struct ChatHistoryView: View {
                     if let onClose = onClose {
                         Button(action: { onClose() }) {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.title)
-                                .foregroundColor(.gray)
-                                .padding(4)
+                                .font(.title2)
+                                .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                                .padding(8)
+                                .background(
+                                    Circle()
+                                        .fill(.ultraThinMaterial)
+                                        .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08))
+                                )
+                                .overlay(
+                                    Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                )
+                                .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                         }
                     } else {
                         Button(action: {
@@ -41,8 +43,13 @@ struct ChatHistoryView: View {
                                 .padding(8)
                                 .background(
                                     Circle()
-                                        .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                                        .fill(.ultraThinMaterial)
+                                        .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08))
                                 )
+                                .overlay(
+                                    Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                )
+                                .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                         }
                     }
                     Spacer()
@@ -60,15 +67,22 @@ struct ChatHistoryView: View {
                                 .padding(8)
                                 .background(
                                     Circle()
-                                        .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                                        .fill(.ultraThinMaterial)
+                                        .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08))
                                 )
+                                .overlay(
+                                    Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                )
+                                .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                         }
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
-                    Color.white
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05))
                         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                 )
                 
@@ -138,43 +152,64 @@ struct ChatHistoryView: View {
 
 struct ChatSessionRow: View {
     let session: ChatSession
+    var highlight: String = ""
+    
+    func highlightText(_ text: String) -> Text {
+        guard !highlight.isEmpty else { return Text(text) }
+        let parts = text.components(separatedBy: highlight)
+        var result = Text("")
+        for (i, part) in parts.enumerated() {
+            result = result + Text(part)
+            if i < parts.count - 1 {
+                result = result + Text(highlight).foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255)).bold()
+            }
+        }
+        return result
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(session.title)
+                highlightText(session.title)
                     .font(.headline)
                     .foregroundColor(.primary)
-                
                 Spacer()
-                
-                Text(session.formattedDate)
+                if session.isArchived {
+                    Image(systemName: "archivebox")
+                        .foregroundColor(Color.gray)
+                        .font(.system(size: 16, weight: .semibold))
+                        .padding(.trailing, 2)
+                }
+                Text(session.lastModified.formatted(date: .abbreviated, time: .shortened))
                     .font(.caption)
                     .foregroundColor(.gray)
             }
-            
-            Text(session.summary)
+            highlightText(session.summary)
                 .font(.subheadline)
                 .foregroundColor(.gray)
                 .lineLimit(2)
-            
             HStack {
                 Text(session.formattedDuration)
                     .font(.caption)
                     .foregroundColor(.gray)
-                
                 Spacer()
-                
                 Text("\(session.messages.count) 条消息")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -185,14 +220,7 @@ struct ChatDetailView: View {
     var body: some View {
         ZStack {
             // 背景
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 255/255, green: 255/255, blue: 255/255),
-                    Color(red: 250/255, green: 250/255, blue: 250/255)
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            Color(red: 255/255, green: 245/255, blue: 235/255)
             .ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -207,8 +235,13 @@ struct ChatDetailView: View {
                             .padding(8)
                             .background(
                                 Circle()
-                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                                    .fill(.ultraThinMaterial)
+                                    .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08))
                             )
+                            .overlay(
+                                Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                     }
                     
                     Spacer()
@@ -218,27 +251,86 @@ struct ChatDetailView: View {
                         .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                     
                     Spacer()
+                    
+                    // 占位视图保持对称
+                    Circle()
+                        .fill(.clear)
+                        .frame(width: 40, height: 40)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
-                    Color.white
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05))
                         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                 )
                 
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 16) {
+                    LazyVStack(spacing: 16) {
                         ForEach(session.messages) { message in
-                            MessageBubble(message: message)
+                            MessageBubbleView(message: message)
+                                .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 16)
                 }
             }
         }
         .navigationBarHidden(true)
-        .interactiveDismissDisabled()
+    }
+}
+
+struct MessageBubbleView: View {
+    let message: ChatMessage
+    
+    var body: some View {
+        HStack {
+            if message.isUser {
+                Spacer()
+            }
+            
+            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
+                Text(message.content)
+                    .font(.body)
+                    .foregroundColor(message.isUser ? .white : .primary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        Group {
+                            if message.isUser {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255))
+                            } else {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.white.opacity(0.7))
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05))
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                    )
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .fill(.ultraThinMaterial)
+                                    )
+                            }
+                        }
+                    )
+                    .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
+                
+                Text(message.formattedTime)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+                    .padding(.horizontal, 4)
+            }
+            
+            if !message.isUser {
+                Spacer()
+            }
+        }
     }
 }
 

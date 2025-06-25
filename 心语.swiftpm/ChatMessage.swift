@@ -16,4 +16,11 @@ struct ChatMessage: Identifiable, Codable, Sendable {
         self.timestamp = timestamp
         self.role = role
     }
+    
+    var formattedTime: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter.string(from: timestamp)
+    }
 } 

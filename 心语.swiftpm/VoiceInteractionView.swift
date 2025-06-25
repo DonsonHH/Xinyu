@@ -42,6 +42,18 @@ struct VoiceInteractionView: View {
     @Environment(\.presentationMode) var presentationMode
     
     @State private var showingHistoryDrawer = false
+    @State private var showingClearHistoryAlert = false
+    
+    @State private var selectedSessionForDelete: ChatSession? = nil
+    @State private var showingDeleteAlert = false
+    @State private var selectedSessionForDetail: ChatSession? = nil
+    
+    @State private var searchText = ""
+    @State private var isSearchActive = false
+    
+    @State private var showingArchiveAlert = false
+    @State private var isSavingSession = false
+    @State private var isSessionSummarySaving = false
     
     // MARK: - 视图主体
     var body: some View {
@@ -58,18 +70,23 @@ struct VoiceInteractionView: View {
                 // 顶部温情导航栏
                 HStack {
                     Button(action: {
-                        withAnimation {
+                        withAnimation(.spring()) {
                             showingHistoryDrawer = true
                         }
                     }) {
-                        Image(systemName: "line.3.horizontal")
+                        Image(systemName: "clock.arrow.circlepath")
                             .font(.title2)
                             .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                             .padding(8)
                             .background(
                                 Circle()
-                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                                    .fill(.ultraThinMaterial)
+                                    .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08))
                             )
+                            .overlay(
+                                Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                     }
                     Spacer()
                     VStack(spacing: 2) {
@@ -80,18 +97,21 @@ struct VoiceInteractionView: View {
                     Spacer()
                     HStack(spacing: 16) {
                         Button(action: {
-                            if !messages.isEmpty {
-                                showingNewChatAlert = true
-                            }
+                            showingArchiveAlert = true
                         }) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title2)
+                            Image(systemName: "archivebox")
+                                .font(.system(size: 20, weight: .bold))
                                 .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                                 .padding(8)
                                 .background(
                                     Circle()
-                                        .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.1))
+                                        .fill(.ultraThinMaterial)
+                                        .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08))
                                 )
+                                .overlay(
+                                    Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                )
+                                .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                         }
                     }
                 }
@@ -113,23 +133,280 @@ struct VoiceInteractionView: View {
             }
             
             if showingHistoryDrawer {
-                Color.black.opacity(0.3)
+                ZStack {
+                    // 背景模糊和渐变
+                    Color.black
+                        .opacity(0.3)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation {
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.85, blendDuration: 0.2)) {
                             showingHistoryDrawer = false
                         }
                     }
+                    
+                    GeometryReader { geometry in
+                        let drawerWidth = isSearchActive ? geometry.size.width : geometry.size.width * 0.8
+                        HStack(spacing: 0) {
+                            ZStack(alignment: .topLeading) {
+                                // 背景
+                                Color(red: 255/255, green: 245/255, blue: 235/255)
+                                    .ignoresSafeArea()
+                                
+                                VStack(spacing: 0) {
+                                    // 顶部导航栏
                 HStack {
-                    ChatHistoryView(onClose: {
-                        withAnimation {
-                            showingHistoryDrawer = false
-                        }
-                    })
-                    .frame(width: min(UIScreen.main.bounds.width * 0.8, 350))
-                    .background(Color.white)
-                    .transition(.move(edge: .leading))
+                                        Spacer()
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "magnifyingglass")
+                                                .foregroundColor(Color.gray.opacity(0.7))
+                                                .font(.system(size: 18, weight: .medium))
+                                            TextField("搜索聊天记录", text: $searchText, onEditingChanged: { editing in
+                                                withAnimation(.spring()) {
+                                                    isSearchActive = editing
+                                                }
+                                            })
+                                            .foregroundColor(.primary)
+                                            .accentColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                                            .disableAutocorrection(true)
+                                        }
+                                        .padding(.vertical, 10)
+                                        .padding(.horizontal, 18)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                                .fill(.ultraThinMaterial)
+                                                .background(
+                                                    LinearGradient(
+                                                        gradient: Gradient(colors: [
+                                                            Color.white.opacity(0.18),
+                                                            Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08)
+                                                        ]),
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    )
+                                                )
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                        )
+                                        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                                        .frame(maxWidth: isSearchActive ? 340 : 250)
+                                        .onTapGesture {
+                                            withAnimation(.spring()) {
+                                                isSearchActive = true
+                                            }
+                                        }
+                                        if isSearchActive {
+                                            Button("取消") {
+                                                withAnimation(.spring()) {
+                                                    isSearchActive = false
+                                                    searchText = ""
+                                                }
+                                            }
+                                            .padding(.leading, 8)
+                                        }
+                                        Button(action: {
+                                            if isSessionSummarySaving {
+                                                isSavingSession = true
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                                    isSavingSession = false
+                                                }
+                                            } else {
+                                                startNewChat()
+                                                withAnimation(.spring()) {
+                                                    showingHistoryDrawer = false
+                                                }
+                                            }
+                                        }) {
+                                            ZStack {
+                                                Circle()
+                                                    .fill(Color(red: 255/255, green: 159/255, blue: 10/255))
+                                                    .frame(width: 36, height: 36)
+                                                    .shadow(color: Color.orange.opacity(0.18), radius: 6, x: 0, y: 2)
+                                                Image(systemName: "plus")
+                                                    .font(.system(size: 18, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
                     Spacer()
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                    .padding(.top, geometry.safeAreaInsets.top)
+                                    .background(
+                                        Rectangle()
+                                            .fill(.ultraThinMaterial)
+                                            .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05))
+                                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+                                            .ignoresSafeArea()
+                                    )
+                                    
+                                    if ChatHistoryManager.shared.chatSessions.isEmpty {
+                                        VStack(spacing: 20) {
+                                            Image(systemName: "bubble.left.and.bubble.right")
+                                                .font(.system(size: 60))
+                                                .foregroundColor(.gray)
+                                            
+                                            Text("暂无聊天记录")
+                                                .font(.title2)
+                                                .foregroundColor(.gray)
+                                        }
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    } else {
+                                        ScrollView {
+                                            LazyVStack(spacing: 12) {
+                                                let sortedSessions = ChatHistoryManager.shared.chatSessions.sorted { $0.lastModified > $1.lastModified }
+                                                let now = Date()
+                                                let sessions24h = sortedSessions.filter { $0.startTime > now.addingTimeInterval(-24*3600) }
+                                                let sessions3d = sortedSessions.filter { $0.startTime > now.addingTimeInterval(-3*24*3600) && $0.startTime <= now.addingTimeInterval(-24*3600) }
+                                                let sessions7d = sortedSessions.filter { $0.startTime > now.addingTimeInterval(-7*24*3600) && $0.startTime <= now.addingTimeInterval(-3*24*3600) }
+                                                let sessions7dPlus = sortedSessions.filter { $0.startTime <= now.addingTimeInterval(-7*24*3600) }
+                                                if !sessions24h.isEmpty {
+                                                    Text("24小时内")
+                                                        .font(.headline)
+                                                        .foregroundColor(.gray)
+                                                        .padding(.top, 8)
+                                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                                    ForEach(sessions24h) { session in
+                                                        ChatSessionRow(session: session, highlight: searchText)
+                                                            .onTapGesture {
+                                                                if session.isArchived {
+                                                                    selectedSessionForDetail = session
+                                                                } else {
+                                                                    messages = session.messages
+                                                                    currentSessionId = session.id
+                                                                    sessionStartTime = session.startTime
+                                                                    withAnimation { showingHistoryDrawer = false }
+                                                                }
+                                                            }
+                                                            .contextMenu {
+                                                                Button(role: .destructive) {
+                                                                    selectedSessionForDelete = session
+                                                                    showingDeleteAlert = true
+                                                                } label: {
+                                                                    Label("删除", systemImage: "trash")
+                                                                }
+                                                            }
+                                                    }
+                                                }
+                                                if !sessions3d.isEmpty {
+                                                    Text("3天内")
+                                                        .font(.headline)
+                                                        .foregroundColor(.gray)
+                                                        .padding(.top, 8)
+                                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                                    ForEach(sessions3d) { session in
+                                                        ChatSessionRow(session: session, highlight: searchText)
+                                                            .onTapGesture {
+                                                                if session.isArchived {
+                                                                    selectedSessionForDetail = session
+                                                                } else {
+                                                                    messages = session.messages
+                                                                    currentSessionId = session.id
+                                                                    sessionStartTime = session.startTime
+                                                                    withAnimation { showingHistoryDrawer = false }
+                                                                }
+                                                            }
+                                                            .contextMenu {
+                                                                Button(role: .destructive) {
+                                                                    selectedSessionForDelete = session
+                                                                    showingDeleteAlert = true
+                                                                } label: {
+                                                                    Label("删除", systemImage: "trash")
+                                                                }
+                                                            }
+                                                    }
+                                                }
+                                                if !sessions7d.isEmpty {
+                                                    Text("7天内")
+                                                        .font(.headline)
+                                                        .foregroundColor(.gray)
+                                                        .padding(.top, 8)
+                                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                                    ForEach(sessions7d) { session in
+                                                        ChatSessionRow(session: session, highlight: searchText)
+                                                            .onTapGesture {
+                                                                if session.isArchived {
+                                                                    selectedSessionForDetail = session
+                                                                } else {
+                                                                    messages = session.messages
+                                                                    currentSessionId = session.id
+                                                                    sessionStartTime = session.startTime
+                                                                    withAnimation { showingHistoryDrawer = false }
+                                                                }
+                                                            }
+                                                            .contextMenu {
+                                                                Button(role: .destructive) {
+                                                                    selectedSessionForDelete = session
+                                                                    showingDeleteAlert = true
+                                                                } label: {
+                                                                    Label("删除", systemImage: "trash")
+                                                                }
+                                                            }
+                                                    }
+                                                }
+                                                if !sessions7dPlus.isEmpty {
+                                                    Text("七天外")
+                                                        .font(.headline)
+                                                        .foregroundColor(.gray)
+                                                        .padding(.top, 8)
+                                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                                    ForEach(sessions7dPlus) { session in
+                                                        ChatSessionRow(session: session, highlight: searchText)
+                                                            .onTapGesture {
+                                                                if session.isArchived {
+                                                                    selectedSessionForDetail = session
+                                                                } else {
+                                                                    messages = session.messages
+                                                                    currentSessionId = session.id
+                                                                    sessionStartTime = session.startTime
+                                                                    withAnimation { showingHistoryDrawer = false }
+                                                                }
+                                                            }
+                                                            .contextMenu {
+                                                                Button(role: .destructive) {
+                                                                    selectedSessionForDelete = session
+                                                                    showingDeleteAlert = true
+                                                                } label: {
+                                                                    Label("删除", systemImage: "trash")
+                                                                }
+                                                            }
+                                                    }
+                                                }
+                                            }
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 12)
+                                        }
+                                        .padding(.bottom, geometry.safeAreaInsets.bottom)
+                                    }
+                                }
+                            }
+                            .frame(width: drawerWidth)
+                            .background(
+                                RoundedRectangle(cornerRadius: 0, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                                    .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05))
+                            )
+                            .clipShape(
+                                RoundedCorner(radius: 28, corners: [.topRight, .bottomRight])
+                            )
+                            .overlay(
+                                RoundedCorner(radius: 28, corners: [.topRight, .bottomRight])
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.15), radius: 16, x: 8, y: 0)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                )
+                            )
+                            .animation(.spring(response: 0.38, dampingFraction: 0.85, blendDuration: 0.2), value: showingHistoryDrawer)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .ignoresSafeArea()
+                    }
                 }
                 .zIndex(100)
             }
@@ -169,51 +446,104 @@ struct VoiceInteractionView: View {
                 presentationMode.wrappedValue.dismiss()
             }
             Button("保存") {
-                saveCurrentSession()
+                Task { await saveCurrentSessionIfChanged() }
                 showingSaveAlert = false
                 presentationMode.wrappedValue.dismiss()
             }
         } message: {
             Text("是否保存当前对话进度？保存后可以在历史记录中继续对话。")
         }
+        .alert("清空历史", isPresented: $showingClearHistoryAlert) {
+            Button("取消", role: .cancel) { }
+            Button("清空", role: .destructive) {
+                ChatHistoryManager.shared.clearAllSessions()
+            }
+        } message: {
+            Text("确定要清空所有聊天记录吗？此操作无法撤销。")
+        }
+        .alert("删除对话", isPresented: $showingDeleteAlert) {
+            Button("取消", role: .cancel) { }
+            Button("删除", role: .destructive) {
+                if let session = selectedSessionForDelete,
+                   let idx = ChatHistoryManager.shared.chatSessions.firstIndex(where: { $0.id == session.id }) {
+                    ChatHistoryManager.shared.removeChatSession(at: IndexSet(integer: idx))
+                }
+            }
+        } message: {
+            Text("确定要删除这条对话记录吗？此操作无法撤销。")
+        }
+        .alert("存档当前话题？", isPresented: $showingArchiveAlert) {
+            Button("取消", role: .cancel) { }
+            Button("存档", role: .destructive) {
+                archiveCurrentSession()
+            }
+        } message: {
+            Text("存档后该话题将无法继续对话，是否确认存档？")
+        }
+        .overlay(savingOverlay)
         .overlay(successOverlay)
+        .sheet(item: $selectedSessionForDetail) { session in
+            ChatDetailView(session: session)
+        }
     }
     
     // MARK: - 子视图
     private var messageList: some View {
         ScrollViewReader { scrollProxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 16) {
-                    ForEach(messages) { message in
-                        MessageBubble(message: message)
-                            .id(message.id)
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            ZStack {
+                if messages.isEmpty {
+                    VStack(spacing: 18) {
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.25))
+                        Text("开始你的心语之旅吧~\n可以输入或说出你的心事")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
-                    
-                    if isStreaming {
-                        MessageBubble(message: ChatMessage(content: currentResponse, isUser: false, isThinking: true))
-                            .id("streaming")
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .padding(32)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(28)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+                    .frame(maxWidth: 340)
+                    .transition(.opacity)
+                }
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        ForEach(messages) { message in
+                            MessageBubble(message: message)
+                                .id(message.id)
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        }
+                        if isStreaming {
+                            MessageBubble(message: ChatMessage(content: currentResponse, isUser: false, isThinking: true))
+                                .id("streaming")
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 16)
+                }
+                .background(Color.clear)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isTextFieldFocused = false
+                }
+                .onChange(of: messages.count) { _ in
+                    if let lastMessage = messages.last {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            scrollProxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 16)
-            }
-            .background(Color.clear)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                isTextFieldFocused = false
-            }
-            .onChange(of: messages.count) { _ in
-                if let lastMessage = messages.last {
+                .onChange(of: currentResponse) { _ in
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        scrollProxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        scrollProxy.scrollTo("streaming", anchor: .bottom)
                     }
-                }
-            }
-            .onChange(of: currentResponse) { _ in
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    scrollProxy.scrollTo("streaming", anchor: .bottom)
                 }
             }
         }
@@ -283,7 +613,7 @@ struct VoiceInteractionView: View {
                             generator.impactOccurred()
                             stopListening()
                             if let transcribedText = transcribedText, !transcribedText.isEmpty {
-                                sendMessage()
+                                sendTextMessage()
                             }
                         }
                     }
@@ -318,16 +648,47 @@ struct VoiceInteractionView: View {
         .background(Color.white)
     }
     
+    private var savingOverlay: some View {
+        Group {
+            if isSavingSession {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 255/255, green: 159/255, blue: 10/255)))
+                        .scaleEffect(1.2)
+                    Text("对话保存中，请稍等")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                }
+                .padding(.horizontal, 22)
+                .padding(.vertical, 14)
+                .background(.ultraThinMaterial)
+                .cornerRadius(22)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.10), radius: 12, x: 0, y: 4)
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSavingSession)
+    }
+    
     private var successOverlay: some View {
         Group {
             if showingSaveSuccess {
                 Text("对话已保存")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.7))
-                    .cornerRadius(20)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 14)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(22)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.10), radius: 12, x: 0, y: 4)
                     .transition(.scale.combined(with: .opacity))
             }
         }
@@ -344,7 +705,7 @@ struct VoiceInteractionView: View {
         stopListening()
         print("[DEBUG] 调用 saveCurrentSession at cleanupView")
 
-        saveSessionOnDisappear()
+        Task { await saveCurrentSessionIfChanged() }
     }
     
     private func setupKeyboardObservers() {
@@ -366,16 +727,36 @@ struct VoiceInteractionView: View {
     // MARK: - 消息处理
     private func sendTextMessage() {
         guard !textInput.isEmpty else { return }
-        
         let messageContent = textInput
         textInput = ""
-        
         Task {
-            await sendMessage(content: messageContent)
+            // 1. 如果是新会话的第一条消息，立即创建卡片
+            if messages.isEmpty {
+                let newId = UUID()
+                let userMessage = ChatMessage(content: messageContent, isUser: true, timestamp: Date())
+                let session = ChatSession(
+                    id: newId,
+                    title: "新对话",
+                    summary: "暂无摘要",
+                    startTime: Date(),
+                    endTime: Date(),
+                    messages: [userMessage],
+                    isArchived: false
+                )
+                ChatHistoryManager.shared.upsertChatSession(session)
+                currentSessionId = newId
+                sessionStartTime = Date()
+                await MainActor.run {
+                    messages = [userMessage]
+                }
+                await sendMessage(content: messageContent, isFirstAIReply: true)
+            } else {
+                await sendMessage(content: messageContent, isFirstAIReply: false)
+            }
         }
     }
     
-    private func sendMessage(content: String) async {
+    private func sendMessage(content: String, isFirstAIReply: Bool) async {
         // 添加用户消息
         let userMessage = ChatMessage(content: content, isUser: true, timestamp: Date())
         await MainActor.run {
@@ -383,25 +764,28 @@ struct VoiceInteractionView: View {
             currentResponse = ""
             isStreaming = true
         }
-        
         do {
             let stream = try await StreamingAPIManager.shared.streamChatRequest(userMessage: content)
             var accumulatedResponse = ""
-            
             for try await chunk in stream {
                 await MainActor.run {
                     accumulatedResponse += chunk
                     currentResponse = accumulatedResponse
                 }
-                // 添加小延迟使显示更自然
-                try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+                try await Task.sleep(nanoseconds: 10_000_000)
             }
-            
             await MainActor.run {
                 let botMessage = ChatMessage(content: currentResponse, isUser: false, timestamp: Date())
                 messages.append(botMessage)
                 isStreaming = false
                 currentResponse = ""
+            }
+            // 只在内容变化时才生成摘要
+            let currentContent = messages.map { $0.content }.joined(separator: "\n")
+            let lastSession = ChatHistoryManager.shared.chatSessions.last
+            let lastContent = lastSession?.messages.map { $0.content }.joined(separator: "\n") ?? ""
+            if currentContent != lastContent {
+                await updateSessionSummaryAndTitle()
             }
         } catch {
             await MainActor.run {
@@ -412,20 +796,28 @@ struct VoiceInteractionView: View {
         }
     }
     
-    private func sendMessage() {
-        guard let transcribedText = transcribedText, !transcribedText.isEmpty else { return }
-        
-        Task {
-            await sendMessage(content: transcribedText)
-            self.transcribedText = nil
-        }
+    private func updateSessionSummaryAndTitle() async {
+        await MainActor.run { isSessionSummarySaving = true }
+        let (title, summary) = await ChatHistoryManager.shared.generateSummaryAndTitle(for: messages)
+        let session = ChatSession(
+            id: currentSessionId ?? UUID(),
+            title: title,
+            summary: summary,
+            startTime: sessionStartTime,
+            endTime: Date(),
+            messages: messages,
+            isArchived: false
+        )
+        ChatHistoryManager.shared.upsertChatSession(session)
+        await MainActor.run { isSessionSummarySaving = false }
     }
     
     // MARK: - 会话管理
     private func startNewChat() {
         if !messages.isEmpty {
             print("[DEBUG] 调用 saveCurrentSession at startNewChat")
-            saveCurrentSession()
+            isSavingSession = true
+            Task { await saveCurrentSessionWithoutAISummary() }
         }
         
         messages.removeAll()
@@ -437,29 +829,36 @@ struct VoiceInteractionView: View {
         }
     }
     
-    private func saveCurrentSession() {
-        guard !messages.isEmpty else { return }
-        
-        Task {
-            let (title, summary) = await ChatHistoryManager.shared.generateSummaryAndTitle(for: messages)
-            
-            let session = ChatSession(
-                id: currentSessionId ?? UUID(),
-                title: title,
-                summary: summary,
-                startTime: sessionStartTime,
-                endTime: Date(),
-                messages: messages
-            )
-            
-            await MainActor.run {
-                ChatHistoryManager.shared.addChatSession(session)
-                let generator = UINotificationFeedbackGenerator()
-                generator.notificationOccurred(.success)
-                
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    showingSaveSuccess = true
-                }
+    private func saveCurrentSessionWithoutAISummary() async {
+        guard !messages.isEmpty else {
+            await MainActor.run { isSavingSession = false }
+            return
+        }
+        let currentContent = messages.map { $0.content }.joined(separator: "\n")
+        let lastSession = ChatHistoryManager.shared.chatSessions.last
+        let lastContent = lastSession?.messages.map { $0.content }.joined(separator: "\n") ?? ""
+        if currentContent == lastContent {
+            await MainActor.run { isSavingSession = false }
+            return // 内容未变，不保存
+        }
+        let session = ChatSession(
+            id: currentSessionId ?? UUID(),
+            title: "新对话",
+            summary: "暂无摘要",
+            startTime: sessionStartTime,
+            endTime: Date(),
+            messages: messages
+        )
+        ChatHistoryManager.shared.upsertChatSession(session)
+        await MainActor.run {
+            isSavingSession = false
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                showingSaveSuccess = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isSavingSession = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     withAnimation {
                         showingSaveSuccess = false
@@ -469,9 +868,38 @@ struct VoiceInteractionView: View {
         }
     }
     
-    private func saveSessionOnDisappear() {
-        if !messages.isEmpty {
-            saveCurrentSession()
+    private func saveCurrentSessionIfChanged() async {
+        guard !messages.isEmpty else { return }
+        let currentContent = messages.map { $0.content }.joined(separator: "\n")
+        let lastSession = ChatHistoryManager.shared.chatSessions.last
+        let lastContent = lastSession?.messages.map { $0.content }.joined(separator: "\n") ?? ""
+        if currentContent == lastContent {
+            return // 内容未变，不保存也不生成摘要
+        }
+            let (title, summary) = await ChatHistoryManager.shared.generateSummaryAndTitle(for: messages)
+            let session = ChatSession(
+                id: currentSessionId ?? UUID(),
+                title: title,
+                summary: summary,
+                startTime: sessionStartTime,
+                endTime: Date(),
+                messages: messages
+            )
+        ChatHistoryManager.shared.upsertChatSession(session)
+            await MainActor.run {
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    showingSaveSuccess = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isSavingSession = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation {
+                            showingSaveSuccess = false
+                        }
+                    }
+                }
         }
     }
     
@@ -682,6 +1110,18 @@ struct VoiceInteractionView: View {
             }
         }
     }
+    
+    private func archiveCurrentSession() {
+        guard let id = currentSessionId else { return }
+        if var session = ChatHistoryManager.shared.chatSessions.first(where: { $0.id == id }) {
+            var archivedSession = session
+            archivedSession.isArchived = true
+            ChatHistoryManager.shared.upsertChatSession(archivedSession)
+        }
+        messages.removeAll()
+        currentSessionId = nil
+        sessionStartTime = Date()
+    }
 }
 
 struct MessageBubble: View {
@@ -740,5 +1180,15 @@ struct MessageBubble: View {
 struct VoiceInteractionView_Previews: PreviewProvider {
     static var previews: some View {
         VoiceInteractionView()
+    }
+}
+
+// MARK: - 右侧圆角Shape
+struct RoundedCorner: Shape {
+    var radius: CGFloat = 28.0
+    var corners: UIRectCorner = .allCorners
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
+        return Path(path.cgPath)
     }
 } 

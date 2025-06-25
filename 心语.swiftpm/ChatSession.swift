@@ -7,14 +7,16 @@ struct ChatSession: Identifiable, Codable, Sendable {
     let startTime: Date
     let endTime: Date
     let messages: [ChatMessage]
+    var isArchived: Bool = false
     
-    init(id: UUID = UUID(), title: String, summary: String, startTime: Date, endTime: Date, messages: [ChatMessage]) {
+    init(id: UUID = UUID(), title: String, summary: String, startTime: Date, endTime: Date, messages: [ChatMessage], isArchived: Bool = false) {
         self.id = id
         self.title = title
         self.summary = summary
         self.startTime = startTime
         self.endTime = endTime
         self.messages = messages
+        self.isArchived = isArchived
     }
     
     var duration: TimeInterval {
@@ -33,5 +35,9 @@ struct ChatSession: Identifiable, Codable, Sendable {
         formatter.timeStyle = .short
         formatter.locale = Locale(identifier: "zh_CN")
         return formatter.string(from: startTime)
+    }
+    
+    var lastModified: Date {
+        messages.last?.timestamp ?? endTime
     }
 } 
