@@ -153,6 +153,7 @@ struct ChatHistoryView: View {
 struct ChatSessionRow: View {
     let session: ChatSession
     var highlight: String = ""
+    var isSelected: Bool = false
     
     func highlightText(_ text: String) -> Text {
         guard !highlight.isEmpty else { return Text(text) }
@@ -201,13 +202,23 @@ struct ChatSessionRow: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05))
+            ZStack {
+                if !isSelected {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.white)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                } else {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color(red: 255/255, green: 236/255, blue: 210/255))
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.18))
+                }
+            }
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                .stroke(isSelected ? Color(red: 255/255, green: 159/255, blue: 10/255) : Color.white.opacity(0.2), lineWidth: isSelected ? 2 : 1)
         )
         .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
     }

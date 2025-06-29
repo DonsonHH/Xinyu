@@ -1,6 +1,6 @@
 import Foundation
 
-struct ChatSession: Identifiable, Codable, Sendable {
+struct ChatSession: Identifiable, Codable, Sendable, Equatable {
     let id: UUID
     let title: String
     let summary: String
@@ -39,5 +39,9 @@ struct ChatSession: Identifiable, Codable, Sendable {
     
     var lastModified: Date {
         messages.last?.timestamp ?? endTime
+    }
+    
+    static func == (lhs: ChatSession, rhs: ChatSession) -> Bool {
+        lhs.id == rhs.id
     }
 } 

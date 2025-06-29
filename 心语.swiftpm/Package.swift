@@ -8,19 +8,20 @@ import PackageDescription
 import AppleProductTypes
 
 let package = Package(
-    name: "666",
+    name: "a-oo",
     platforms: [
         .iOS("16.0")
     ],
     products: [
         .iOSApplication(
-            name: "666",
+            name: "a-oo",
             targets: ["AppModule"],
-            teamIdentifier: "8QS9TN9HKL",
-            displayVersion: "1.0",
+            bundleIdentifier: "xinyuteam",
+            teamIdentifier: "6X33Y62X4Q",
+            displayVersion: "2.0",
             bundleVersion: "1",
-            appIcon: .placeholder(icon: .cloud),
-            accentColor: .presetColor(.mint),
+            appIcon: .placeholder(icon: .plane),
+            accentColor: .presetColor(.orange),
             supportedDeviceFamilies: [
                 .phone
             ],
@@ -34,7 +35,7 @@ let package = Package(
                 .fileAccess(.moviesFolder, mode: .readWrite),
                 .fileAccess(.userSelectedFiles, mode: .readWrite)
             ],
-            appCategory: .actionGames,
+            appCategory: .lifestyle,
             additionalInfoPlistContentFilePath: "Info.plist"
         )
     ],

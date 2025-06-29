@@ -27,7 +27,7 @@ struct VoiceInteractionView: View {
     
     // 文字输入相关状态
     @State private var textInput = ""
-    @State private var isTextInputActive = false
+    @State private var isTextInputActive = true
     @State private var keyboardHeight: CGFloat = 0
     @FocusState private var isTextFieldFocused: Bool
     
@@ -90,7 +90,7 @@ struct VoiceInteractionView: View {
                     }
                     Spacer()
                     VStack(spacing: 2) {
-                        Text("温柔陪伴你的每一天")
+                        Text(currentSessionTitle)
                             .font(.system(size: 20, weight: .bold, design: .rounded))
                             .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                     }
@@ -268,7 +268,7 @@ struct VoiceInteractionView: View {
                                                         .padding(.top, 8)
                                                         .frame(maxWidth: .infinity, alignment: .leading)
                                                     ForEach(sessions24h) { session in
-                                                        ChatSessionRow(session: session, highlight: searchText)
+                                                        ChatSessionRow(session: session, highlight: searchText, isSelected: currentSessionId == session.id)
                                                             .onTapGesture {
                                                                 if session.isArchived {
                                                                     selectedSessionForDetail = session
@@ -296,7 +296,7 @@ struct VoiceInteractionView: View {
                                                         .padding(.top, 8)
                                                         .frame(maxWidth: .infinity, alignment: .leading)
                                                     ForEach(sessions3d) { session in
-                                                        ChatSessionRow(session: session, highlight: searchText)
+                                                        ChatSessionRow(session: session, highlight: searchText, isSelected: currentSessionId == session.id)
                                                             .onTapGesture {
                                                                 if session.isArchived {
                                                                     selectedSessionForDetail = session
@@ -324,7 +324,7 @@ struct VoiceInteractionView: View {
                                                         .padding(.top, 8)
                                                         .frame(maxWidth: .infinity, alignment: .leading)
                                                     ForEach(sessions7d) { session in
-                                                        ChatSessionRow(session: session, highlight: searchText)
+                                                        ChatSessionRow(session: session, highlight: searchText, isSelected: currentSessionId == session.id)
                                                             .onTapGesture {
                                                                 if session.isArchived {
                                                                     selectedSessionForDetail = session
@@ -352,7 +352,7 @@ struct VoiceInteractionView: View {
                                                         .padding(.top, 8)
                                                         .frame(maxWidth: .infinity, alignment: .leading)
                                                     ForEach(sessions7dPlus) { session in
-                                                        ChatSessionRow(session: session, highlight: searchText)
+                                                        ChatSessionRow(session: session, highlight: searchText, isSelected: currentSessionId == session.id)
                                                             .onTapGesture {
                                                                 if session.isArchived {
                                                                     selectedSessionForDetail = session
@@ -512,37 +512,37 @@ struct VoiceInteractionView: View {
                     .frame(maxWidth: 340)
                     .transition(.opacity)
                 }
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 16) {
-                        ForEach(messages) { message in
-                            MessageBubble(message: message)
-                                .id(message.id)
-                                .transition(.opacity.combined(with: .move(edge: .bottom)))
-                        }
-                        if isStreaming {
-                            MessageBubble(message: ChatMessage(content: currentResponse, isUser: false, isThinking: true))
-                                .id("streaming")
-                                .transition(.opacity.combined(with: .move(edge: .bottom)))
-                        }
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    ForEach(messages) { message in
+                        MessageBubble(message: message)
+                            .id(message.id)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 16)
-                }
-                .background(Color.clear)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    isTextFieldFocused = false
-                }
-                .onChange(of: messages.count) { _ in
-                    if let lastMessage = messages.last {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            scrollProxy.scrollTo(lastMessage.id, anchor: .bottom)
-                        }
+                    if isStreaming {
+                        MessageBubble(message: ChatMessage(content: currentResponse, isUser: false, isThinking: true))
+                            .id("streaming")
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                 }
-                .onChange(of: currentResponse) { _ in
+                .padding(.horizontal, 8)
+                .padding(.vertical, 16)
+            }
+            .background(Color.clear)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isTextFieldFocused = false
+            }
+            .onChange(of: messages.count) { _ in
+                if let lastMessage = messages.last {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        scrollProxy.scrollTo("streaming", anchor: .bottom)
+                        scrollProxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    }
+                }
+            }
+            .onChange(of: currentResponse) { _ in
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    scrollProxy.scrollTo("streaming", anchor: .bottom)
                     }
                 }
             }
@@ -577,75 +577,158 @@ struct VoiceInteractionView: View {
     // 微信风格底部输入区
     private var wechatInputBar: some View {
         HStack(spacing: 8) {
-            // 语音按钮
-            ZStack {
-                if isListening {
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color(red: 255/255, green: 236/255, blue: 210/255))
-                        .frame(width: 44, height: 44)
-                    Text("松开发送")
-                        .font(.system(size: 14))
-                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                } else {
-                    Button(action: {
-                        safelyCheckMicrophonePermission()
-                    }) {
-                        Image(systemName: "mic.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                            .frame(width: 44, height: 44)
-                    }
-                }
-            }
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        if !isListening {
-                            let generator = UIImpactFeedbackGenerator(style: .medium)
-                            generator.prepare()
-                            generator.impactOccurred()
-                            safelyCheckMicrophonePermission()
-                        }
-                    }
-                    .onEnded { _ in
-                        if isListening {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.impactOccurred()
-                            stopListening()
-                            if let transcribedText = transcribedText, !transcribedText.isEmpty {
-                                sendTextMessage()
-                            }
-                        }
-                    }
-            )
-            // 输入框
-            TextField("说出你的心事或输入文字…", text: $textInput)
-                .padding(.vertical, 10)
-                .padding(.horizontal, 12)
-                .background(Color.white)
-                .cornerRadius(20)
-                .shadow(color: Color.orange.opacity(0.05), radius: 2, x: 0, y: 1)
-                .focused($isTextFieldFocused)
-            // 发送按钮
+            // 切换输入方式按钮
             Button(action: {
-                if !textInput.isEmpty {
-                    sendTextMessage()
+                if isListening {
+                    stopListening()
+                }
+                isTextInputActive.toggle()
+                if isTextInputActive {
+                    isTextFieldFocused = true
                 }
             }) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundColor(textInput.isEmpty ? .gray : .white)
+                Image(systemName: isTextInputActive ? "mic" : "keyboard")
+                    .font(.system(size: 24))
+                    .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    .padding(12)
                     .background(
                         Circle()
-                            .fill(textInput.isEmpty ? Color.gray.opacity(0.2) : Color(red: 255/255, green: 159/255, blue: 10/255))
-                            .frame(width: 38, height: 38)
+                            .fill(Color.white.opacity(0.8))
+                            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
                     )
             }
-            .disabled(textInput.isEmpty)
+            // 语音按钮区域
+            if !isTextInputActive {
+                voiceButton
+            }
+            // 输入框
+            if isTextInputActive {
+                TextField("说出你的心事或输入文字…", text: $textInput)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                    .background(Color.white)
+                    .cornerRadius(20)
+                    .shadow(color: Color.orange.opacity(0.05), radius: 2, x: 0, y: 1)
+                    .focused($isTextFieldFocused)
+                // 发送按钮
+                Button(action: {
+                    if !textInput.isEmpty {
+                        sendTextMessage()
+                    }
+                }) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(textInput.isEmpty ? .gray : .white)
+                        .background(
+                            Circle()
+                                .fill(textInput.isEmpty ? Color.gray.opacity(0.2) : Color(red: 255/255, green: 159/255, blue: 10/255))
+                                .frame(width: 38, height: 38)
+                        )
+                }
+                .disabled(textInput.isEmpty)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.white)
+    }
+    
+    // 新增voiceButton和rippleEffect实现，复用isListening、rippleScale1/2/3、safelyCheckMicrophonePermission、stopListening等状态和方法
+    private var voiceButton: some View {
+        ZStack {
+            if isListening {
+                rippleEffect
+            }
+            Circle()
+                .fill(Color.white)
+                .frame(width: 70, height: 70)
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 3)
+            Circle()
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color(red: 255/255, green: 159/255, blue: 10/255),
+                            Color(red: 255/255, green: 149/255, blue: 0/255)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 60, height: 60)
+            Image(systemName: "waveform.circle.fill")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 30, height: 30)
+                .foregroundColor(.white)
+                .opacity(isListening ? 0.9 : 1.0)
+                .scaleEffect(isListening ? 1.1 : 1.0)
+                .animation(.easeInOut(duration: 0.5), value: isListening)
+        }
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    if !isListening {
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.prepare()
+                        generator.impactOccurred()
+                        safelyCheckMicrophonePermission()
+                        withAnimation {
+                            rippleScale1 = 1.4
+                            rippleScale2 = 1.2
+                            rippleScale3 = 1.3
+                        }
+                    }
+                }
+                .onEnded { _ in
+                    if isListening {
+                        let generator = UIImpactFeedbackGenerator(style: .light)
+                        generator.impactOccurred()
+                        stopListening()
+                        if let transcribedText = transcribedText, !transcribedText.isEmpty {
+                            sendTextMessage()
+                        }
+                        withAnimation {
+                            rippleScale1 = 1.0
+                            rippleScale2 = 1.0
+                            rippleScale3 = 1.0
+                        }
+                    }
+                }
+        )
+        .padding(.vertical, 8)
+    }
+    
+    private var rippleEffect: some View {
+        ZStack {
+            Circle()
+                .stroke(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.2), lineWidth: 1.5)
+                .frame(width: 120, height: 120)
+                .scaleEffect(rippleScale1)
+                .animation(
+                    Animation.easeInOut(duration: 2.0)
+                        .repeatForever(autoreverses: true)
+                        .delay(0.1),
+                    value: rippleScale1
+                )
+            Circle()
+                .stroke(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.3), lineWidth: 2)
+                .frame(width: 100, height: 100)
+                .scaleEffect(rippleScale2)
+                .animation(
+                    Animation.easeInOut(duration: 1.2)
+                        .repeatForever(autoreverses: true),
+                    value: rippleScale2
+                )
+            Circle()
+                .stroke(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.4), lineWidth: 3)
+                .frame(width: 90, height: 90)
+                .scaleEffect(rippleScale3)
+                .animation(
+                    Animation.easeInOut(duration: 1.5)
+                        .repeatForever(autoreverses: true)
+                        .delay(0.2),
+                    value: rippleScale3
+                )
+        }
     }
     
     private var savingOverlay: some View {
@@ -894,12 +977,12 @@ struct VoiceInteractionView: View {
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     isSavingSession = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        withAnimation {
-                            showingSaveSuccess = false
-                        }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation {
+                        showingSaveSuccess = false
                     }
                 }
+            }
         }
     }
     
@@ -1121,6 +1204,13 @@ struct VoiceInteractionView: View {
         messages.removeAll()
         currentSessionId = nil
         sessionStartTime = Date()
+    }
+    
+    private var currentSessionTitle: String {
+        if let id = currentSessionId, let session = ChatHistoryManager.shared.chatSessions.first(where: { $0.id == id }) {
+            return session.title
+        }
+        return "温柔陪伴你的每一天"
     }
 }
 
