@@ -35,6 +35,7 @@ struct VoiceInteractionView: View {
     @State private var rippleScale1: CGFloat = 1.0
     @State private var rippleScale2: CGFloat = 1.0
     @State private var rippleScale3: CGFloat = 1.0
+    @State private var ripple = false
     
     // 当前会话ID
     @State private var currentSessionId: UUID?
@@ -55,13 +56,25 @@ struct VoiceInteractionView: View {
     @State private var isSavingSession = false
     @State private var isSessionSummarySaving = false
     
+    @StateObject private var ttsManager = SpeechSynthesizerManager()
+    @State private var lastSpokenMessageId: UUID? = nil
+    
+    @State private var waveformHeights: [CGFloat] = Array(repeating: 0.5, count: 8)
+    @State private var waveformTimer: Timer?
+    
+    @State private var waveformPoints: [CGFloat] = Array(repeating: 0.5, count: 40)
+    @State private var waveformLineTimer: Timer?
+    
     // MARK: - 视图主体
     var body: some View {
         NavigationStack {
             mainContent
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if !showingHistoryDrawer {
-                        bottomInputBar
+                        VStack(spacing: 0) {
+                            ttsStatusBar
+                            bottomInputBar
+                        }
                     }
                 }
                 .toolbar {
@@ -96,6 +109,9 @@ struct VoiceInteractionView: View {
         }
         .onAppear(perform: setupView)
         .onDisappear(perform: cleanupView)
+        .onChange(of: messages) { newMessages in
+            speakLatestAImessageIfNeeded(messages: newMessages)
+        }
         .alert(isPresented: $showingPermissionAlert) {
             Alert(
                 title: Text(permissionAlertTitle),
@@ -696,6 +712,7 @@ struct VoiceInteractionView: View {
             currentResponse = ""
             isStreaming = true
         }
+        print("[DEBUG] 用户消息已添加: \(content)")
         do {
             let stream = try await StreamingAPIManager.shared.streamChatRequest(userMessage: content)
             var accumulatedResponse = ""
@@ -710,7 +727,7 @@ struct VoiceInteractionView: View {
                 let botMessage = ChatMessage(content: currentResponse, isUser: false, timestamp: Date())
                 messages.append(botMessage)
                 isStreaming = false
-                currentResponse = ""
+                print("[DEBUG] AI消息已添加: \(currentResponse)")
             }
             // 只在内容变化时才生成摘要
             let currentContent = messages.map { $0.content }.joined(separator: "\n")
@@ -724,6 +741,7 @@ struct VoiceInteractionView: View {
                 isStreaming = false
                 let errorMessage = ChatMessage(content: "请求失败: \(error.localizedDescription)", isUser: false, timestamp: Date())
                 messages.append(errorMessage)
+                print("[DEBUG] AI消息请求失败: \(error.localizedDescription)")
             }
         }
     }
@@ -1120,6 +1138,93 @@ struct VoiceInteractionView: View {
                 .foregroundColor(textInput.isEmpty ? .gray : Color(red: 255/255, green: 159/255, blue: 10/255))
         }
         .disabled(textInput.isEmpty)
+    }
+
+    /// 检查并朗读最新AI消息
+    private func speakLatestAImessageIfNeeded(messages: [ChatMessage]) {
+        print("[DEBUG] 检查AI消息朗读触发: \(messages.last?.content ?? "nil") | isUser: \(messages.last?.isUser ?? true) | lastId: \(messages.last?.id.uuidString ?? "nil") | 已朗读: \(lastSpokenMessageId?.uuidString ?? "nil")")
+        guard let last = messages.last, !last.isUser, last.id != lastSpokenMessageId, !last.content.isEmpty else {
+            print("[DEBUG] 不满足朗读条件，跳过TTS"); return }
+        let language = detectLanguage(for: last.content)
+        print("[DEBUG] 调用TTS朗读: \(last.content) | language: \(language)")
+        ttsManager.speak(text: last.content, language: language, utteranceId: last.id)
+        lastSpokenMessageId = last.id
+    }
+
+    /// 简单语言检测（可扩展更复杂的检测）
+    private func detectLanguage(for text: String) -> String {
+        if text.range(of: "[\\u4E00-\\u9FFF]", options: .regularExpression) != nil {
+            print("[DEBUG] 检测到中文，使用zh-CN")
+            return "zh-CN"
+        } else {
+            print("[DEBUG] 未检测到中文，使用en-US")
+            return "en-US"
+        }
+    }
+
+    // 拆分底部TTS提示条，避免表达式过于复杂导致编译器报错
+    private var ttsStatusBar: some View {
+        Group {
+            if ttsManager.isSpeaking || ttsManager.isPaused {
+                HStack(spacing: 10) {
+                    Image(systemName: ttsManager.isPaused ? "play.circle.fill" : "waveform.circle.fill")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(ttsManager.isPaused ? .gray : .orange)
+                        .scaleEffect(ttsManager.isPaused ? 1.0 : 1.15)
+                        .animation(.easeInOut(duration: 0.3), value: ttsManager.isPaused)
+                    Text(ttsManager.isPaused ? "已暂停，点击继续" : "AI正在朗读，点击暂停")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 15, weight: .medium))
+                    Spacer()
+                    ttsWaveformBar
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial)
+                .cornerRadius(20)
+                .shadow(color: .orange.opacity(0.12), radius: 8, x: 0, y: 2)
+                .padding(.bottom, 6)
+                .padding(.horizontal, 24)
+                .onTapGesture {
+                    if ttsManager.isPaused {
+                        ttsManager.continueSpeaking()
+                    } else {
+                        ttsManager.pauseSpeaking()
+                    }
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+    }
+
+    private var ttsWaveformBar: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<8, id: \.self) { i in
+                Capsule()
+                    .fill(Color.orange)
+                    .opacity(ttsManager.isPaused ? 0.18 : 0.35)
+                    .frame(width: 2, height: 12 + 16 * waveformHeights[i])
+            }
+        }
+        .frame(height: 28)
+        .onAppear { startWaveformAnimation() }
+        .onDisappear { stopWaveformAnimation() }
+    }
+
+    private func startWaveformAnimation() {
+        stopWaveformAnimation()
+        waveformTimer = Timer.scheduledTimer(withTimeInterval: 0.18, repeats: true) { _ in
+            if ttsManager.isSpeaking && !ttsManager.isPaused {
+                withAnimation(.easeInOut(duration: 0.16)) {
+                    waveformHeights = waveformHeights.map { _ in CGFloat.random(in: 0.2...1.0) }
+                }
+            }
+        }
+    }
+
+    private func stopWaveformAnimation() {
+        waveformTimer?.invalidate()
+        waveformTimer = nil
     }
 }
 
