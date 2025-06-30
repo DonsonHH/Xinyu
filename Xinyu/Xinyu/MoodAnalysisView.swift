@@ -18,75 +18,58 @@ struct MoodAnalysisView: View {
     @State private var showingSettings = false
     
     var body: some View {
-        ZStack {
-            themeManager.globalBackgroundColor
-                .edgesIgnoringSafeArea(.all)
-                .animation(.easeInOut(duration: 0.5), value: themeManager.globalBackgroundColor)
-            VStack(spacing: 0) {
-                // 顶部栏
-                HStack {
+        NavigationStack {
+            ZStack {
+                themeManager.globalBackgroundColor
+                    .edgesIgnoringSafeArea(.all)
+                    .animation(.easeInOut(duration: 0.5), value: themeManager.globalBackgroundColor)
+                VStack(spacing: 0) {
+                    // 主体内容
+                    ScrollView {
+                        Spacer().frame(height: -20)
+                        VStack(spacing: 25) {
+                            // 今日情绪卡片
+                            emotionCard
+                            Spacer(minLength: 30)
+                        }
+                        .padding(.top, 10)
+                        .padding(.bottom, 20)
+                    }
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
                     NavigationLink(destination: ProfileView()) {
                         Image(systemName: "line.3.horizontal")
                             .font(.title2)
                             .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                            .padding(8)
-                            .background(
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                                    .background(themeManager.globalBackgroundColor.opacity(0.15))
-                            )
-                            .overlay(
-                                Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
-                            )
-                            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                     }
-                    Spacer()
+                }
+                ToolbarItem(placement: .principal) {
                     Text("心迹")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                    Spacer()
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: SettingsView()) {
                         Image(systemName: "gear")
                             .font(.title2)
                             .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                            .padding(8)
-                            .background(
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                                    .background(themeManager.globalBackgroundColor.opacity(0.15))
-                            )
-                            .overlay(
-                                Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
-                            )
-                            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                     }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.white.opacity(0.95))
-                .shadow(color: Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05), radius: 8, x: 0, y: 4)
-                // 主体内容
-                ScrollView {
-                    Spacer(minLength: 40)
-                    VStack(spacing: 25) {
-                        // 今日情绪卡片
-                        emotionCard
-                        Spacer(minLength: 30)
-                    }
-                    .padding(.top, 10)
-                    .padding(.bottom, 20)
                 }
             }
-        }
-        .onAppear {
-            // 同步当前情绪状态
-            if themeManager.currentEmotion != todayMood.mood {
-                todayMood = MoodData(
-                    date: Date(),
-                    mood: themeManager.currentEmotion,
-                    score: getScoreForEmotion(themeManager.currentEmotion),
-                    description: getDescriptionForEmotion(themeManager.currentEmotion)
-                )
+            .toolbarBackground(.clear, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .onAppear {
+                // 同步当前情绪状态
+                if themeManager.currentEmotion != todayMood.mood {
+                    todayMood = MoodData(
+                        date: Date(),
+                        mood: themeManager.currentEmotion,
+                        score: getScoreForEmotion(themeManager.currentEmotion),
+                        description: getDescriptionForEmotion(themeManager.currentEmotion)
+                    )
+                }
             }
         }
     }

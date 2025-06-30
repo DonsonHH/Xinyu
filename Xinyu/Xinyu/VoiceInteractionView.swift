@@ -57,21 +57,43 @@ struct VoiceInteractionView: View {
     
     // MARK: - 视图主体
     var body: some View {
-        mainContent
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                bottomInputBar
-            }
-    }
-    
-    private var mainContent: some View {
-        ZStack {
-            backgroundGradient
-            mainVStack
-            if showingHistoryDrawer {
-                historyDrawer
-            }
+        NavigationStack {
+            mainContent
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if !showingHistoryDrawer {
+                        bottomInputBar
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        withAnimation(.spring()) {
+                            showingHistoryDrawer = true
+                        }
+                    }) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.title2)
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                        }
+                    }
+                    ToolbarItem(placement: .principal) {
+                        Text(currentSessionTitle)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            startNewChat()
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                        }
+                    }
+                }
+                .toolbarBackground(.clear, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
         }
-        .navigationBarHidden(true)
         .onAppear(perform: setupView)
         .onDisappear(perform: cleanupView)
         .alert(isPresented: $showingPermissionAlert) {
@@ -147,6 +169,17 @@ struct VoiceInteractionView: View {
         }
     }
     
+    private var mainContent: some View {
+                ZStack {
+            backgroundGradient
+            mainVStack
+            if showingHistoryDrawer {
+                historyDrawer
+                    .zIndex(999)
+            }
+        }
+    }
+    
     private var backgroundGradient: some View {
         LinearGradient(
             gradient: Gradient(colors: [Color(red: 255/255, green: 245/255, blue: 235/255), Color(red: 255/255, green: 236/255, blue: 210/255)]),
@@ -158,8 +191,8 @@ struct VoiceInteractionView: View {
     
     private var mainVStack: some View {
         VStack(spacing: 0) {
-            topBar
             messageList
+                .ignoresSafeArea(.container, edges: .top)
             if isListening {
                 transcriptionView
             }
@@ -170,7 +203,7 @@ struct VoiceInteractionView: View {
         ZStack {
             Color.black.opacity(0.3)
                 .ignoresSafeArea()
-                .onTapGesture {
+                                                            .onTapGesture {
                     withAnimation(.spring(response: 0.38, dampingFraction: 0.85, blendDuration: 0.2)) {
                         showingHistoryDrawer = false
                     }
@@ -179,85 +212,120 @@ struct VoiceInteractionView: View {
                 let drawerWidth = isSearchActive ? geometry.size.width : geometry.size.width * 0.8
                 HStack(spacing: 0) {
                     historyDrawerPanel(geometry: geometry, drawerWidth: drawerWidth)
+                        .animation(.spring(response: 0.38, dampingFraction: 0.85, blendDuration: 0.2), value: isSearchActive)
                     Spacer(minLength: 0)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .ignoresSafeArea()
             }
         }
-        .zIndex(100)
+        .zIndex(1000)
     }
     
     private func historyDrawerPanel(geometry: GeometryProxy, drawerWidth: CGFloat) -> some View {
-        ZStack(alignment: .topLeading) {
-            Color(red: 255/255, green: 245/255, blue: 235/255)
-                .ignoresSafeArea()
-            VStack(spacing: 0) {
-                searchBar(geometry: geometry)
-                if ChatHistoryManager.shared.chatSessions.isEmpty {
-                    VStack(spacing: 20) {
-                        Image(systemName: "bubble.left.and.bubble.right")
-                            .font(.system(size: 60))
-                            .foregroundColor(.gray)
-                        Text("暂无聊天记录")
-                            .font(.title2)
-                            .foregroundColor(.gray)
+        NavigationView {
+            ZStack(alignment: .topLeading) {
+                Color(red: 255/255, green: 245/255, blue: 235/255)
+                    .ignoresSafeArea()
+                VStack(spacing: 0) {
+                    if ChatHistoryManager.shared.chatSessions.isEmpty {
+                        historyEmptyView
+                                                                } else {
+                        historyScrollView(geometry: geometry)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            let sortedSessions = ChatHistoryManager.shared.chatSessions.sorted { $0.lastModified > $1.lastModified }
-                            ForEach(sortedSessions) { session in
-                                ChatSessionRow(session: session, highlight: searchText, isSelected: currentSessionId == session.id)
-                                    .onTapGesture {
-                                        if session.isArchived {
-                                            selectedSessionForDetail = session
-                                        } else {
-                                            messages = session.messages
-                                            currentSessionId = session.id
-                                            sessionStartTime = session.startTime
-                                            withAnimation { showingHistoryDrawer = false }
-                                        }
-                                    }
-                                    .contextMenu {
-                                        Button(role: .destructive) {
-                                            selectedSessionForDelete = session
-                                            showingDeleteAlert = true
-                                        } label: {
-                                            Label("删除", systemImage: "trash")
-                                        }
-                                    }
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                }
+                .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜索聊天记录")
+                .onChange(of: searchText) { newValue in
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.85, blendDuration: 0.2)) {
+                        isSearchActive = !searchText.isEmpty
                     }
-                    .padding(.bottom, geometry.safeAreaInsets.bottom)
                 }
             }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("对话记录")
+                                                        .font(.headline)
+                                    }
+                                }
+                            }
+                            .frame(width: drawerWidth)
+                            .background(
+                                RoundedRectangle(cornerRadius: 0, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                                    .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05))
+                            )
+                            .clipShape(
+                                RoundedCorner(radius: 28, corners: [.topRight, .bottomRight])
+                            )
+                            .overlay(
+                                RoundedCorner(radius: 28, corners: [.topRight, .bottomRight])
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.15), radius: 16, x: 8, y: 0)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                )
+                            )
+                            .animation(.spring(response: 0.38, dampingFraction: 0.85, blendDuration: 0.2), value: showingHistoryDrawer)
+    }
+    
+    private var historyEmptyView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: 60))
+                .foregroundColor(.gray)
+            Text("暂无聊天记录")
+                .font(.title2)
+                .foregroundColor(.gray)
         }
-        .frame(width: drawerWidth)
-        .background(
-            RoundedRectangle(cornerRadius: 0, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05))
-        )
-        .clipShape(
-            RoundedCorner(radius: 28, corners: [.topRight, .bottomRight])
-        )
-        .overlay(
-            RoundedCorner(radius: 28, corners: [.topRight, .bottomRight])
-                .stroke(Color.white.opacity(0.2), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.15), radius: 16, x: 8, y: 0)
-        .transition(
-            .asymmetric(
-                insertion: .move(edge: .leading).combined(with: .opacity),
-                removal: .move(edge: .leading).combined(with: .opacity)
-            )
-        )
-        .animation(.spring(response: 0.38, dampingFraction: 0.85, blendDuration: 0.2), value: showingHistoryDrawer)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private func historyScrollView(geometry: GeometryProxy) -> some View {
+        let sortedSessions = ChatHistoryManager.shared.chatSessions.sorted { $0.lastModified > $1.lastModified }
+        return ScrollView {
+            historySessionList(sortedSessions: sortedSessions)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+        }
+    }
+    
+    private func historySessionList(sortedSessions: [ChatSession]) -> some View {
+        LazyVStack(spacing: 12) {
+            ForEach(sortedSessions) { session in
+                historySessionRow(session: session)
+            }
+        }
+    }
+    
+    private func historySessionRow(session: ChatSession) -> some View {
+        ChatSessionRow(session: session, highlight: searchText, isSelected: currentSessionId == session.id)
+            .onTapGesture {
+                if session.isArchived {
+                    selectedSessionForDetail = session
+                } else {
+                    messages = session.messages
+                    currentSessionId = session.id
+                    sessionStartTime = session.startTime
+                    withAnimation { showingHistoryDrawer = false }
+                }
+            }
+            .contextMenu {
+                Button(role: .destructive) {
+                    selectedSessionForDelete = session
+                    showingDeleteAlert = true
+                } label: {
+                    Label("删除", systemImage: "trash")
+                }
+                Button(role: .none) {
+                    archiveSession(session)
+                } label: {
+                    Label("存档", systemImage: "archivebox")
+                }
+        }
     }
     
     // MARK: - 子视图
@@ -287,6 +355,7 @@ struct VoiceInteractionView: View {
                 }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 16) {
+                        Spacer().frame(height: 80)
                     ForEach(messages) { message in
                         MessageBubble(message: message)
                             .id(message.id)
@@ -316,6 +385,13 @@ struct VoiceInteractionView: View {
             .onChange(of: currentResponse) { _ in
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     scrollProxy.scrollTo("streaming", anchor: .bottom)
+                    }
+                }
+                .onChange(of: textInput) { _ in
+                    if isTextInputActive, let lastMessage = messages.last {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            scrollProxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
                     }
                 }
             }
@@ -986,147 +1062,31 @@ struct VoiceInteractionView: View {
         return "温柔陪伴你的每一天"
     }
 
-    private var topBar: some View {
-        HStack {
-            Button(action: {
-                withAnimation(.spring()) {
-                    showingHistoryDrawer = true
-                }
-            }) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.title2)
-                    .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                    .padding(8)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08))
-                    )
-                    .overlay(
-                        Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
+    private var bottomInputBar: some View {
+        HStack(spacing: 10) {
+            micOrKeyboardButton
+            if isTextInputActive {
+                chatTextField
             }
-            Spacer()
-            VStack(spacing: 2) {
-                Text(currentSessionTitle)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+            if !isTextInputActive {
+                voiceButton
             }
-            Spacer()
-            HStack(spacing: 16) {
-                Button(action: {
-                    showingArchiveAlert = true
-                }) {
-                    Image(systemName: "archivebox")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                        .padding(8)
-                        .background(
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                                .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08))
-                        )
-                        .overlay(
-                            Circle().stroke(Color.white.opacity(0.18), lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color.white.opacity(0.95))
-        .shadow(color: Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05), radius: 8, x: 0, y: 4)
-    }
-
-    private func searchBar(geometry: GeometryProxy) -> some View {
-        HStack {
-            Spacer()
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(Color.gray.opacity(0.7))
-                    .font(.system(size: 18, weight: .medium))
-                TextField("搜索聊天记录", text: $searchText, onEditingChanged: { editing in
-                    withAnimation(.spring()) {
-                        isSearchActive = editing
-                    }
-                })
-                .foregroundColor(.primary)
-                .accentColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                .disableAutocorrection(true)
-            }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 18)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.white.opacity(0.18),
-                                Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
-            .frame(maxWidth: isSearchActive ? 340 : 250)
-            .onTapGesture {
-                withAnimation(.spring()) {
-                    isSearchActive = true
-                }
-            }
-            if isSearchActive {
-                Button("取消") {
-                    withAnimation(.spring()) {
-                        isSearchActive = false
-                        searchText = ""
-                    }
-                }
-                .padding(.leading, 8)
-            }
-            Button(action: {
-                if isSessionSummarySaving {
-                    isSavingSession = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                        isSavingSession = false
-                    }
-                } else {
-                    startNewChat()
-                    withAnimation(.spring()) {
-                        showingHistoryDrawer = false
-                    }
-                }
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(Color(red: 255/255, green: 159/255, blue: 10/255))
-                        .frame(width: 36, height: 36)
-                        .shadow(color: Color.orange.opacity(0.18), radius: 6, x: 0, y: 2)
-                    Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-                }
-            }
-            Spacer()
+            sendButton
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .padding(.top, geometry.safeAreaInsets.top)
-        .background(
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .background(Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.05))
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-                .ignoresSafeArea()
-        )
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: Color.black.opacity(0.10), radius: 12, x: 0, y: 2)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 10)
+    }
+
+    // 新增存档指定会话方法
+    private func archiveSession(_ session: ChatSession) {
+        var archivedSession = session
+        archivedSession.isArchived = true
+        ChatHistoryManager.shared.upsertChatSession(archivedSession)
     }
 
     private var micOrKeyboardButton: some View {
@@ -1160,26 +1120,6 @@ struct VoiceInteractionView: View {
                 .foregroundColor(textInput.isEmpty ? .gray : Color(red: 255/255, green: 159/255, blue: 10/255))
         }
         .disabled(textInput.isEmpty)
-    }
-
-    private var bottomInputBar: some View {
-        HStack(spacing: 10) {
-            micOrKeyboardButton
-            if isTextInputActive {
-                chatTextField
-            }
-            if !isTextInputActive {
-                voiceButton
-            }
-            sendButton
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: Color.black.opacity(0.10), radius: 12, x: 0, y: 2)
-        .padding(.horizontal, 18)
-        .padding(.bottom, 10)
     }
 }
 
