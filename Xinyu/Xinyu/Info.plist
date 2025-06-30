@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>需要使用麦克风来录制您的语音，以便进行情绪分析</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>需要使用语音识别功能来理解您说的话，以便记录您的情绪</string>
+    <key>NSHealthShareUsageDescription</key>
+    <string>需要访问您的健康数据以获取心率变异性(HRV)信息，用于分析您的压力水平</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>需要更新您的健康数据以记录您的情绪状态</string>
+    <key>NSCameraUsageDescription</key>
+    <string>需要使用前置摄像头来分析您的面部表情，以便进行情绪分析</string>
+    <key>CFBundleIdentifier</key>
+    <string>donson.Xinyu</string>
+    <key>CFBundleName</key>
+    <string>Xinyu</string>
+    <key>CFBundleDisplayName</key>
+    <string>Xinyu</string>
+    <key>CFBundleExecutable</key>
+    <string>Xinyu</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>zh_CN</string>
+    <key>CFBundleSupportedPlatforms</key>
+    <array>
+        <string>iPhoneOS</string>
+    </array>
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>armv7</string>
+    </array>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+</dict>
+</plist> 
