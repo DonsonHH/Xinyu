@@ -78,7 +78,7 @@ class GameModel: ObservableObject {
                 // 可以选择打出这张牌
                 checkPlayableCards()
             } else {
-                // 不能打出，轮到电脑
+                // 不能打出，轮到小猫咪
                 currentPlayer = .computer
                 computerTurn()
             }
@@ -147,9 +147,9 @@ class GameModel: ObservableObject {
         // 处理特殊牌的效果
         switch card.type {
         case .skip:
-            // 跳过电脑的回合
+            // 跳过小猫咪的回合
             currentPlayer = .human
-            message = "跳过电脑回合！"
+            message = "跳过小猫咪回合！"
             
         case .reverse:
             // 反转顺序
@@ -157,7 +157,7 @@ class GameModel: ObservableObject {
             message = "顺序反转！"
             
         case .drawTwo:
-            // 电脑抽两张牌
+            // 小猫咪抽两张牌
             for _ in 0..<2 {
                 if deck.isEmpty {
                     reshuffleDeck()
@@ -167,13 +167,13 @@ class GameModel: ObservableObject {
                 }
             }
             currentPlayer = .human
-            message = "电脑抽了两张牌！"
+            message = "小猫咪抽了两张牌！"
             
         case .wild, .wildDrawFour:
             // 需要选择颜色
             gameStatus = .colorSelection
             if card.type == .wildDrawFour {
-                // 电脑抽四张牌
+                // 小猫咪抽四张牌
                 for _ in 0..<4 {
                     if deck.isEmpty {
                         reshuffleDeck()
@@ -182,13 +182,13 @@ class GameModel: ObservableObject {
                         computerHand.append(newCard)
                     }
                 }
-                message = "选择颜色，电脑抽了四张牌！"
+                message = "选择颜色，小猫咪抽了四张牌！"
             } else {
                 message = "选择颜色！"
             }
             
         default:
-            // 普通牌，轮到电脑
+            // 普通牌，轮到小猫咪
             currentPlayer = .computer
             computerTurn()
         }
@@ -212,7 +212,7 @@ class GameModel: ObservableObject {
     func computerTurn() {
         guard currentPlayer == .computer && gameStatus == .playing else { return }
         
-        // 检查电脑是否有可出的牌
+        // 检查小猫咪是否有可出的牌
         let playableCards = computerHand.filter { card in
             if let topCard = discardPile.last {
                 return canPlayCard(card, after: topCard)
@@ -221,7 +221,7 @@ class GameModel: ObservableObject {
         }
         
         if let cardToPlay = playableCards.randomElement() {
-            // 电脑出牌
+            // 小猫咪出牌
             if let index = computerHand.firstIndex(where: { $0.id == cardToPlay.id }) {
                 let playedCard = computerHand.remove(at: index)
                 discardPile.append(playedCard)
@@ -229,12 +229,12 @@ class GameModel: ObservableObject {
                 // 处理特殊牌效果
                 switch playedCard.type {
                 case .skip:
-                    message = "电脑跳过你的回合！"
+                    message = "小猫咪跳过你的回合！"
                     currentPlayer = .computer
                     computerTurn()
                     
                 case .reverse:
-                    message = "电脑反转了顺序！"
+                    message = "小猫咪反转了顺序！"
                     currentPlayer = .computer
                     computerTurn()
                     
@@ -252,7 +252,7 @@ class GameModel: ObservableObject {
                     currentPlayer = .human
                     
                 case .wild, .wildDrawFour:
-                    // 电脑随机选择颜色
+                    // 小猫咪随机选择颜色
                     let colors: [CardColor] = [.red, .blue, .green, .yellow]
                     let selectedColor = colors.randomElement() ?? .red
                     
@@ -272,50 +272,50 @@ class GameModel: ObservableObject {
                                 playerHand.append(newCard)
                             }
                         }
-                        message = "电脑选择了\(selectedColor)色，你抽了四张牌！"
+                        message = "小猫咪选择了\(selectedColor)色，你抽了四张牌！"
                     } else {
-                        message = "电脑选择了\(selectedColor)色！"
+                        message = "小猫咪选择了\(selectedColor)色！"
                     }
                     currentPlayer = .human
                     
                 default:
-                    message = "电脑出了一张牌"
+                    message = "小猫咪出了一张牌"
                     currentPlayer = .human
                 }
                 
                 // 检查游戏是否结束
                 if computerHand.isEmpty {
                     gameStatus = .gameOver
-                    message = "电脑赢了！"
+                    message = "小猫咪赢了！"
                 }
             }
         } else {
-            // 电脑没有可出的牌，需要抽牌
+            // 小猫咪没有可出的牌，需要抽牌
             if deck.isEmpty {
                 reshuffleDeck()
             }
             
             if let newCard = deck.popLast() {
                 computerHand.append(newCard)
-                message = "电脑抽了一张牌"
+                message = "小猫咪抽了一张牌"
                 
                 // 检查抽到的牌是否可以打出
                 if let topCard = discardPile.last, canPlayCard(newCard, after: topCard) {
-                    // 电脑可以打出这张牌
+                    // 小猫咪可以打出这张牌
                     if let index = computerHand.firstIndex(where: { $0.id == newCard.id }) {
                         let playedCard = computerHand.remove(at: index)
                         discardPile.append(playedCard)
-                        message = "电脑抽了一张牌并打出"
+                        message = "小猫咪抽了一张牌并打出"
                         
                         // 处理特殊牌效果
                         switch playedCard.type {
                         case .skip:
-                            message = "电脑跳过你的回合！"
+                            message = "小猫咪跳过你的回合！"
                             currentPlayer = .computer
                             computerTurn()
                             
                         case .reverse:
-                            message = "电脑反转了顺序！"
+                            message = "小猫咪反转了顺序！"
                             currentPlayer = .computer
                             computerTurn()
                             
@@ -333,7 +333,7 @@ class GameModel: ObservableObject {
                             currentPlayer = .human
                             
                         case .wild, .wildDrawFour:
-                            // 电脑随机选择颜色
+                            // 小猫咪随机选择颜色
                             let colors: [CardColor] = [.red, .blue, .green, .yellow]
                             let selectedColor = colors.randomElement() ?? .red
                             
@@ -353,21 +353,21 @@ class GameModel: ObservableObject {
                                         playerHand.append(newCard)
                                     }
                                 }
-                                message = "电脑选择了\(selectedColor)色，你抽了四张牌！"
+                                message = "小猫咪选择了\(selectedColor)色，你抽了四张牌！"
                             } else {
-                                message = "电脑选择了\(selectedColor)色！"
+                                message = "小猫咪选择了\(selectedColor)色！"
                             }
                             currentPlayer = .human
                             
                         default:
-                            message = "电脑出了一张牌"
+                            message = "小猫咪出了一张牌"
                             currentPlayer = .human
                         }
                         
                         // 检查游戏是否结束
                         if computerHand.isEmpty {
                             gameStatus = .gameOver
-                            message = "电脑赢了！"
+                            message = "小猫咪赢了！"
                         }
                     }
                 } else {

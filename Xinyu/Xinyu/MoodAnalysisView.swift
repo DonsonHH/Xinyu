@@ -3,6 +3,7 @@ import AVFoundation
 
 struct MoodAnalysisView: View {
     @Environment(\.presentationMode) var presentationMode
+    @ObservedObject private var profileManager = UserProfileManager.shared
     @State private var todayMood: MoodData = MoodData(
         date: Date(),
         mood: "平静",
@@ -12,8 +13,6 @@ struct MoodAnalysisView: View {
     
     // 使用主题管理器
     @ObservedObject private var themeManager = ThemeManager.shared
-    // 添加用户资料管理器
-    @ObservedObject private var profileManager = UserProfileManager.shared
     @State private var showingProfile = false
     @State private var showingSettings = false
     
@@ -40,7 +39,7 @@ struct MoodAnalysisView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     NavigationLink(destination: ProfileView()) {
-                        Image(systemName: "line.3.horizontal")
+                        Image(systemName: "person.circle")
                             .font(.title2)
                             .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                     }
@@ -61,10 +60,19 @@ struct MoodAnalysisView: View {
             .toolbarBackground(.clear, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .onAppear {
-                // 同步当前情绪状态
-                if themeManager.currentEmotion != todayMood.mood {
+                // 今日情绪与心情手帐同步
+                let today = Date()
+                let entries = profileManager.getMoodEntries(for: today)
+                if let entry = entries.first {
                     todayMood = MoodData(
-                        date: Date(),
+                        date: entry.date,
+                        mood: entry.mood,
+                        score: getScoreForEmotion(entry.mood),
+                        description: getDescriptionForEmotion(entry.mood)
+                    )
+                } else {
+                    todayMood = MoodData(
+                        date: today,
                         mood: themeManager.currentEmotion,
                         score: getScoreForEmotion(themeManager.currentEmotion),
                         description: getDescriptionForEmotion(themeManager.currentEmotion)
@@ -227,15 +235,25 @@ struct MoodAnalysisView_Previews: PreviewProvider {
 
 // 在文件末尾添加EmotionCalendarView组件
 struct EmotionCalendarView: View {
-    // 示例数据：日期-emoji
-    let emotionMap: [Int: String] = [
-        17: "😊", 18: "😊", 19: "😊", 20: "😊", 21: "😊",
-        22: "🐱", 23: "😊", 24: "😊"
+    // 1. mood到emoji的映射
+    private let moodEmojiMap: [String: String] = [
+        "开心": "😊",
+        "平静": "😌",
+        "疲惫": "😪",
+        "焦虑": "😟",
+        "生气": "😠",
+        "悲伤": "😢"
     ]
+    // 2. 用户心情记录
+    @ObservedObject private var profileManager = UserProfileManager.shared
     let today = Calendar.current.component(.day, from: Date())
     let weekSymbols = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
     let daysInMonth: Int
     let firstWeekday: Int
+    let calendar = Calendar.current
+    let currentDate = Date()
+    let currentYear: Int
+    let currentMonth: Int
     init() {
         let calendar = Calendar.current
         let date = Date()
@@ -244,8 +262,20 @@ struct EmotionCalendarView: View {
         let comps = calendar.dateComponents([.year, .month], from: date)
         let firstDay = calendar.date(from: comps) ?? date
         firstWeekday = calendar.component(.weekday, from: firstDay) - 1 // 0=周日
+        currentYear = comps.year ?? 2024
+        currentMonth = comps.month ?? 1
     }
     @State private var selectedDay: Int? = Calendar.current.component(.day, from: Date())
+    // 工具：获取某天的心情emoji
+    private func emojiForDay(_ day: Int) -> String {
+        guard let date = calendar.date(from: DateComponents(year: currentYear, month: currentMonth, day: day)) else { return "-" }
+        let entries = profileManager.getMoodEntries(for: date)
+        if let mood = entries.first?.mood, let emoji = moodEmojiMap[mood] {
+            return emoji
+        } else {
+            return "-"
+        }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -253,6 +283,10 @@ struct EmotionCalendarView: View {
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(Color(red: 30/255, green: 40/255, blue: 90/255))
                 Spacer()
+                // 显示当前月份
+                Text("\(currentYear)年\(currentMonth)月")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color(red: 30/255, green: 40/255, blue: 90/255))
             }
             .padding(.horizontal, 6)
             // 星期标题
@@ -283,7 +317,7 @@ struct EmotionCalendarView: View {
                                         )
                                         .frame(maxWidth: .infinity)
                                 } else {
-                                    let emoji = emotionMap[day] ?? ""
+                                    let emoji = emojiForDay(day)
                                     Button(action: {
                                         selectedDay = day
                                     }) {
@@ -297,13 +331,12 @@ struct EmotionCalendarView: View {
                                                     .fill(Color.white)
                                                     .frame(width: 32, height: 32)
                                             }
-                                            if emoji.isEmpty {
+                                            VStack(spacing: 0) {
                                                 Text("\(day)")
-                                                    .font(.system(size: 15, weight: .medium))
+                                                    .font(.system(size: 12, weight: .medium))
                                                     .foregroundColor(selectedDay == day ? .white : Color(red: 30/255, green: 40/255, blue: 90/255))
-                                            } else {
                                                 Text(emoji)
-                                                    .font(.system(size: 24))
+                                                    .font(.system(size: 18))
                                             }
                                         }
                                     }

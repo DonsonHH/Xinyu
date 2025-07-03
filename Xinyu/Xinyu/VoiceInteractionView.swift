@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 import Speech
 import UIKit
+import Combine
 
 @available(iOS 15.0, *)
 struct VoiceInteractionView: View {
@@ -58,6 +59,7 @@ struct VoiceInteractionView: View {
     
     @StateObject private var ttsManager = SpeechSynthesizerManager()
     @State private var lastSpokenMessageId: UUID? = nil
+    @AppStorage("selectedVoiceIdentifier") private var selectedVoiceIdentifier = AVSpeechSynthesisVoice(language: "zh-CN")?.identifier ?? "zh-CN"
     
     @State private var waveformHeights: [CGFloat] = Array(repeating: 0.5, count: 8)
     @State private var waveformTimer: Timer?
@@ -1146,8 +1148,8 @@ struct VoiceInteractionView: View {
         guard let last = messages.last, !last.isUser, last.id != lastSpokenMessageId, !last.content.isEmpty else {
             print("[DEBUG] 不满足朗读条件，跳过TTS"); return }
         let language = detectLanguage(for: last.content)
-        print("[DEBUG] 调用TTS朗读: \(last.content) | language: \(language)")
-        ttsManager.speak(text: last.content, language: language, utteranceId: last.id)
+        print("[DEBUG] 调用TTS朗读: \(last.content) | language: \(language) | identifier: \(selectedVoiceIdentifier)")
+        ttsManager.speak(text: last.content, language: language, identifier: selectedVoiceIdentifier, utteranceId: last.id)
         lastSpokenMessageId = last.id
     }
 

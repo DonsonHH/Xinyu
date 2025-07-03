@@ -108,22 +108,13 @@ struct VoiceSettingsView: View {
     @AppStorage("selectedVoice") private var selectedVoice = "zh-CN"
     @AppStorage("inputLanguage") private var inputLanguage = "auto"
     @AppStorage("backgroundChat") private var backgroundChat = false
+    @AppStorage("selectedVoiceIdentifier") private var selectedVoiceIdentifier = AVSpeechSynthesisVoice(language: "zh-CN")?.identifier ?? "zh-CN"
     @ObservedObject private var themeManager = ThemeManager.shared
     
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var isTesting = false
-    
-    let availableVoices = [
-        ("zh-CN", "中文（中国）"),
-        ("en-US", "英语（美国）"),
-        ("ja-JP", "日语（日本）"),
-        ("ko-KR", "韩语（韩国）"),
-        ("fr-FR", "法语（法国）"),
-        ("de-DE", "德语（德国）"),
-        ("es-ES", "西班牙语（西班牙）"),
-        ("it-IT", "意大利语（意大利）")
-    ]
+    @State private var availableVoiceList: [(id: String, name: String, lang: String)] = []
     
     let inputLanguages = [
         ("auto", "自动检测"),
@@ -140,14 +131,14 @@ struct VoiceSettingsView: View {
     var body: some View {
         List {
             Section(header: Text("语音设置"), footer: Text("配置语音输入和输出相关的参数")) {
-                Picker("AI语音", selection: $selectedVoice) {
-                    ForEach(availableVoices, id: \.0) { voice in
-                        Text(voice.1).tag(voice.0)
+                Picker("AI语音", selection: $selectedVoiceIdentifier) {
+                    ForEach(availableVoiceList, id: \ .id) { voice in
+                        Text("\(voice.name)（\(voice.lang)）").tag(voice.id)
                     }
                 }
                 .pickerStyle(.navigationLink)
-                .onChange(of: selectedVoice) { newValue in
-                    playSampleVoice(newValue)
+                .onChange(of: selectedVoiceIdentifier) { newValue in
+                    playSampleVoiceByIdentifier(newValue)
                 }
                 
                 Picker("输入语言", selection: $inputLanguage) {
@@ -220,15 +211,30 @@ struct VoiceSettingsView: View {
         .listStyle(InsetGroupedListStyle())
         .interactiveDismissDisabled()
         .background(themeManager.globalBackgroundColor)
+        .onAppear(perform: loadAvailableVoices)
     }
     
-    private func playSampleVoice(_ voiceIdentifier: String) {
+    private func loadAvailableVoices() {
+        let allVoices = AVSpeechSynthesisVoice.speechVoices()
+        // 1. 先筛选所有中文语音包
+        let chineseVoices = allVoices.filter { $0.language.hasPrefix("zh") }
+        // 2. 再筛选所有英文语音包
+        let englishVoices = allVoices.filter { $0.language.hasPrefix("en") }
+        // 3. 英文语音包优先选高音质（premium/enhanced），否则选前两个
+        let sortedEnglish = englishVoices.sorted { ($0.quality.rawValue, $0.name) > ($1.quality.rawValue, $1.name) }
+        let selectedEnglish = Array(sortedEnglish.prefix(2))
+        // 4. 合并
+        let result = chineseVoices + selectedEnglish
+        availableVoiceList = result.map { v in (id: v.identifier, name: v.name, lang: v.language) }
+    }
+    
+    private func playSampleVoiceByIdentifier(_ identifier: String) {
+        guard let voice = AVSpeechSynthesisVoice(identifier: identifier) else { return }
         let utterance = AVSpeechUtterance(string: "这是一段示例语音")
-        utterance.voice = AVSpeechSynthesisVoice(language: voiceIdentifier)
+        utterance.voice = voice
         utterance.rate = 0.5
         utterance.pitchMultiplier = 1.0
         utterance.volume = 1.0
-        
         let synthesizer = AVSpeechSynthesizer()
         synthesizer.speak(utterance)
     }

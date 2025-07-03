@@ -20,17 +20,22 @@ class SpeechSynthesizerManager: NSObject, ObservableObject {
     func speak(
         text: String,
         language: String = "zh-CN",
+        identifier: String? = nil,
         utteranceId: UUID? = nil,
         rate: Float = AVSpeechUtteranceDefaultSpeechRate,
         volume: Float = 1.0,
         pitch: Float = 1.0
     ) {
-        print("[TTS] speak: \(text) | language: \(language)")
+        print("[TTS] speak: \(text) | language: \(language) | identifier: \(identifier ?? "-")")
         // 1. 设置音频会话为播放模式，确保TTS有声音
         setAudioSessionForPlayback()
         stopSpeaking()
         let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: language)
+        if let identifier = identifier, let voice = AVSpeechSynthesisVoice(identifier: identifier) {
+            utterance.voice = voice
+        } else {
+            utterance.voice = AVSpeechSynthesisVoice(language: language)
+        }
         utterance.rate = rate
         utterance.volume = volume
         utterance.pitchMultiplier = pitch

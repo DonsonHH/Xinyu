@@ -1,8 +1,8 @@
 import SwiftUI
+import AVKit
 
 struct ContentView: View {
-    // 第一阶段动画状态（开屏效果）
-    @State private var splashPhase = true
+    @Binding var splashPhase: Bool
     @State private var splashOpacity = 0.0
     @State private var splashLogoScale = 0.5
     @State private var splashLogoRotation = 0.0
@@ -27,6 +27,13 @@ struct ContentView: View {
     // 定义主题色
     private let mainColor = Color(red: 255/255, green: 159/255, blue: 10/255) // 橙色
     private let accentColor = Color(red: 255/255, green: 255/255, blue: 255/255) // 白色
+    
+    // 首次引导弹窗状态，依赖UserProfileManager的isOnboardingCompleted方法
+    @State private var showOnboarding = !UserProfileManager.shared.isOnboardingCompleted()
+    
+    @State private var showGetEmotionButton: Bool = false // 控制"获取今日情绪吧"按钮显隐
+    @State private var navigateToEmotionFeedback: Bool = false // 控制自动跳转
+    @EnvironmentObject var tabSelection: TabSelection
     
     var body: some View {
         NavigationView {
@@ -55,38 +62,47 @@ struct ContentView: View {
                     
                     // 动态背景效果
                     ForEach(0..<3) { index in
+                        let color: Color = splashPhase ? accentColor.opacity(0.1) : mainColor.opacity(0.1)
+                        let frameWidth: CGFloat = 200
+                        let xOffset: CGFloat = {
+                            let base = Double(index)
+                            if isAnimating {
+                                let x1 = sin(base * .pi / 2) * 150
+                                let x2 = cos(base * .pi / 3) * 50
+                                return CGFloat(x1 + x2)
+                            } else {
+                                let x1 = -sin(base * .pi / 2) * 150
+                                let x2 = -cos(base * .pi / 3) * 50
+                                return CGFloat(x1 + x2)
+                            }
+                        }()
+                        let yOffset: CGFloat = {
+                            let base = Double(index)
+                            if isAnimating {
+                                let y1 = cos(base * .pi / 2) * 100
+                                let y2 = sin(base * .pi / 3) * 30
+                                return CGFloat(y1 + y2)
+                            } else {
+                                let y1 = -cos(base * .pi / 2) * 100
+                                let y2 = -sin(base * .pi / 3) * 30
+                                return CGFloat(y1 + y2)
+                            }
+                        }()
+                        let anim = Animation.easeInOut(duration: (4 + Double(index)) / circleSpeeds[index])
+                            .repeatForever(autoreverses: true)
+                            .delay(Double(index) * 0.8)
+                            .speed(0.8)
+                        let blurRadius: CGFloat = circleStates[index] ? 1 : 3
+                        let scale: CGFloat = circleScales[index]
+                        let springAnim = Animation.spring(response: 0.3, dampingFraction: 0.6, blendDuration: 0.3)
                         Circle()
-                            .fill(splashPhase ? accentColor.opacity(0.1) : mainColor.opacity(0.1))
-                            .frame(width: 200)
-                            .offset(
-                                x: isAnimating ? 
-                                    sin(Double(index) * .pi / 2) * 150 + 
-                                    cos(Double(index) * .pi / 3) * 50 : 
-                                    -sin(Double(index) * .pi / 2) * 150 - 
-                                    cos(Double(index) * .pi / 3) * 50,
-                                y: isAnimating ? 
-                                    cos(Double(index) * .pi / 2) * 100 + 
-                                    sin(Double(index) * .pi / 3) * 30 : 
-                                    -cos(Double(index) * .pi / 2) * 100 - 
-                                    sin(Double(index) * .pi / 3) * 30
-                            )
-                            .animation(
-                                Animation.easeInOut(duration: (4 + Double(index)) / circleSpeeds[index])
-                                    .repeatForever(autoreverses: true)
-                                    .delay(Double(index) * 0.8)
-                                    .speed(0.8),
-                                value: isAnimating
-                            )
-                            .blur(radius: circleStates[index] ? 1 : 3)
-                            .scaleEffect(circleScales[index])
-                            .animation(
-                                Animation.spring(
-                                    response: 0.3,
-                                    dampingFraction: 0.6,
-                                    blendDuration: 0.3
-                                ),
-                                value: circleScales[index]
-                            )
+                            .fill(color)
+                            .frame(width: frameWidth)
+                            .offset(x: xOffset, y: yOffset)
+                            .animation(anim, value: isAnimating)
+                            .blur(radius: blurRadius)
+                            .scaleEffect(scale)
+                            .animation(springAnim, value: scale)
                             .onTapGesture {
                                 handleCircleTap(index: index)
                             }
@@ -135,12 +151,12 @@ struct ContentView: View {
                                 )
                         }
                         
-                        // 主 Logo
-                        Image(systemName: "waveform.circle.fill")
+                        // 主 Logo（已替换为自定义app图片集）
+                        Image("app")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 100)
-                            .foregroundColor(splashPhase ? accentColor : mainColor)
+                            .clipShape(Circle())
                             .rotationEffect(.degrees(splashPhase ? splashLogoRotation : 0))
                             .scaleEffect(splashPhase ? splashLogoScale : logoScale)
                             .opacity(splashPhase ? splashOpacity : 1)
@@ -164,7 +180,7 @@ struct ContentView: View {
                     Spacer().frame(height: 60)
                     
                     // 开始按钮
-                    NavigationLink(destination: EmotionFeedbackView()) {
+                    if showGetEmotionButton {
                         HStack {
                             Image(systemName: "waveform")
                                 .font(.title3)
@@ -180,61 +196,81 @@ struct ContentView: View {
                         )
                         .opacity(splashPhase ? 0 : buttonOpacity)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    // 隐式导航跳转
+                    NavigationLink(destination: EmotionFeedbackView(), isActive: $navigateToEmotionFeedback) {
+                        EmptyView()
+                    }
                     
                     Spacer()
                 }
                 .padding(.horizontal)
+
+                // 吉祥物左下角悬浮，放在ZStack最后一层
+                if !splashPhase {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            MascotView(
+                                showGetEmotionButton: $showGetEmotionButton,
+                                navigateToEmotionFeedback: $navigateToEmotionFeedback,
+                                onTabSwitch: { tab in tabSelection.selectedTab = tab }
+                            )
+                            Spacer()
+                        }
+                    }
+                    .padding(.leading, 5)
+                    .padding(.bottom, 90)
+                }
             }
             .navigationBarHidden(true)
             .edgesIgnoringSafeArea(.all)
-        }
-        .navigationViewStyle(StackNavigationViewStyle())
-        .edgesIgnoringSafeArea(.all)
-        .onAppear {
-            // 第一阶段：开屏动画
-            withAnimation(.easeIn(duration: 0.8)) {
-                splashOpacity = 1.0
+            // 集成首次引导弹窗，仅首次使用时弹出
+            .sheet(isPresented: $showOnboarding) {
+                OnboardingView(isPresented: $showOnboarding)
             }
-            
-            withAnimation(.spring(
-                response: 0.8,
-                dampingFraction: 0.6,
-                blendDuration: 0.6
-            ).delay(0.3)) {
-                splashLogoScale = 1.0
-                splashLogoRotation = 360
-                splashTextOffset = 0
-            }
-            
-            // 延迟后进入第二阶段：主界面动画
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                withAnimation(.easeOut(duration: 0.5)) {
-                    splashPhase = false
-                }
-                
-                // 启动主界面动画
+            .onAppear {
+                // 第一阶段：开屏动画
                 withAnimation(.easeIn(duration: 0.8)) {
-                    backgroundOpacity = 1.0
+                    splashOpacity = 1.0
                 }
-                
                 withAnimation(.spring(
                     response: 0.8,
                     dampingFraction: 0.6,
                     blendDuration: 0.6
                 ).delay(0.3)) {
-                    isAnimating = true
-                    logoScale = 1.0
+                    splashLogoScale = 1.0
+                    splashLogoRotation = 360
+                    splashTextOffset = 0
                 }
-                
-                // 延迟显示按钮
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    withAnimation(.easeIn(duration: 0.5)) {
-                        buttonOpacity = 1.0
+                // 延迟后进入第二阶段：主界面动画
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation(.easeOut(duration: 0.5)) {
+                        splashPhase = false
+                    }
+                    // 启动主界面动画
+                    withAnimation(.easeIn(duration: 0.8)) {
+                        backgroundOpacity = 1.0
+                    }
+                    withAnimation(.spring(
+                        response: 0.8,
+                        dampingFraction: 0.6,
+                        blendDuration: 0.6
+                    ).delay(0.3)) {
+                        isAnimating = true
+                        logoScale = 1.0
+                    }
+                    // 延迟显示按钮
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation(.easeIn(duration: 0.5)) {
+                            buttonOpacity = 1.0
+                        }
                     }
                 }
             }
         }
+        .navigationViewStyle(StackNavigationViewStyle())
+        .edgesIgnoringSafeArea(.all)
+        .tint(Color(red: 255/255, green: 159/255, blue: 10/255))
     }
     
     // 添加圆圈点击处理函数
@@ -294,6 +330,6 @@ struct ContentView: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
+        ContentView(splashPhase: .constant(true))
     }
 }

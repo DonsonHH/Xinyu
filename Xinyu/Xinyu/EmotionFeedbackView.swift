@@ -10,7 +10,7 @@ struct EmotionFeedbackView: View {
     @State private var emotionScore: Int = 0 // 默认分数
     @State private var emotionDescription: String = "正在分析您的情绪状态..." // 默认描述
     @State private var isCameraActive: Bool = false // 默认关闭相机
-    @State private var hrvValue: Double = Double.random(in: 20...80) // 随机HRV值
+    @State private var hrvValue: Double = 0 // HRV初始值为0，等待真实获取
     @State private var stressLevel: String = "未知"
     @State private var isRecordingVoice: Bool = false
     @State private var voiceText: String = ""
@@ -30,6 +30,8 @@ struct EmotionFeedbackView: View {
     @State private var cameraPermissionGranted: Bool = false
     @State private var showCameraPermissionAlert: Bool = false
     @State private var cameraOpacity: Double = 0
+    @State private var hrvLoading: Bool = true // HRV加载状态
+    @State private var hrvError: String? = nil // HRV获取失败信息
     
     // 使用 ThemeManager 管理全局主题
     @ObservedObject private var themeManager = ThemeManager.shared
@@ -138,6 +140,81 @@ struct EmotionFeedbackView: View {
         }
     }
     
+    // HRV环形仪表盘组件
+    struct HRVCircleView: View {
+        let value: Double
+        let level: String
+        let loading: Bool
+        let error: String?
+        var body: some View {
+            VStack(spacing: 8) {
+                if loading {
+                    ProgressView("正在获取HRV...")
+                        .progressViewStyle(CircularProgressViewStyle(tint: .orange))
+                        .frame(width: 120, height: 120)
+                } else if let error = error {
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 12)
+                            .frame(width: 120, height: 120)
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.red)
+                    }
+                    Text(error)
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                } else if value > 0 {
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.15), lineWidth: 12)
+                            .frame(width: 120, height: 120)
+                        Circle()
+                            .trim(from: 0, to: CGFloat(min(value / 100, 1)))
+                            .stroke(
+                                hrvColor(for: level),
+                                style: StrokeStyle(lineWidth: 12, lineCap: .round)
+                            )
+                            .rotationEffect(.degrees(-90))
+                            .frame(width: 120, height: 120)
+                        VStack(spacing: 2) {
+                            Text(String(format: "%.2f", value))
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundColor(hrvColor(for: level))
+                            Text("ms")
+                                .font(.system(size: 14))
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    Text("压力水平：\(level)")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(hrvColor(for: level))
+                } else {
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 12)
+                            .frame(width: 120, height: 120)
+                        Image(systemName: "minus")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray)
+                    }
+                    Text("暂无HRV数据")
+                        .font(.system(size: 14))
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        // 根据压力等级返回颜色
+        private func hrvColor(for level: String) -> Color {
+            switch level {
+            case "低": return .green
+            case "中": return .yellow
+            case "高": return .red
+            default: return .gray
+            }
+        }
+    }
+    
     var body: some View {
         ZStack {
             // 根据当前情绪变化的背景颜色
@@ -172,14 +249,12 @@ struct EmotionFeedbackView: View {
                         Text("当前 HRV 状态")
                             .font(.system(size: 18, weight: .medium))
                             .foregroundColor(.gray)
-                        
-                        Text(String(format: "%.2f", hrvValue))
-                            .font(.system(size: 36, weight: .bold))
-                            .foregroundColor(.orange)
-                        
-                        Text("压力水平: \(stressLevel)")
-                            .font(.system(size: 16))
+                        HRVCircleView(value: hrvValue, level: stressLevel, loading: hrvLoading, error: hrvError)
+                        // 数据来源标注
+                        Text("数据来源：Apple Health（健康）")
+                            .font(.system(size: 12))
                             .foregroundColor(.gray)
+                            .padding(.top, 2)
                     }
                     .padding()
                     .background(
@@ -253,39 +328,6 @@ struct EmotionFeedbackView: View {
                                         .fill(isCameraActive ? Color.orange.opacity(0.2) : Color.gray.opacity(0.1))
                                 )
                             }
-                        }
-                        
-                        // 添加游戏卡片
-                        NavigationLink(destination: NMOGameView()) {
-                            VStack(spacing: 15) {
-                                HStack {
-                                    Image(systemName: "gamecontroller.fill")
-                                        .font(.title)
-                                        .foregroundColor(.orange)
-                                    
-                                    VStack(alignment: .leading) {
-                                        Text("NMO 小游戏")
-                                            .font(.headline)
-                                            .foregroundColor(.orange)
-                                        
-                                        Text("放松心情，开始游戏")
-                                            .font(.subheadline)
-                                            .foregroundColor(.gray)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(Color.white)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                            )
-                            .padding(.horizontal)
                         }
                         
                         // 相机预览区域
@@ -478,25 +520,22 @@ struct EmotionFeedbackView: View {
         .onAppear {
             // 启动加载动画
             isRotating = true
-            
+            hrvLoading = true
+            hrvError = nil
             // 5秒后更新情绪状态
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
                 isLoading = false
                 isRotating = false
                 updateRandomEmotion()
             }
-            
             // 初始化全局背景颜色
             themeManager.setGlobalBackgroundColorForEmotion(detectedEmotion)
-            
             // 请求 HealthKit 授权并获取 HRV 数据
             requestHealthKitAuthorization()
             fetchHRVData()
-            
             // 请求麦克风和语音识别权限
             requestMicrophonePermission()
             requestSpeechRecognitionPermission()
-            
             // 请求相机权限
             requestCameraPermission()
         }
@@ -505,6 +544,18 @@ struct EmotionFeedbackView: View {
             // 更新全局背景颜色
             themeManager.setGlobalBackgroundColorForEmotion(newEmotion)
         }
+        .toolbarBackground(
+            .ultraThinMaterial,
+            for: .navigationBar
+        )
+        .toolbarBackground(
+            LinearGradient(
+                colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.3)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            for: .navigationBar
+        )
     }
     
     // 随机生成情绪
@@ -551,36 +602,41 @@ struct EmotionFeedbackView: View {
         }
     }
     
-    // 获取 HRV 数据
+    // 获取 HRV 数据（已用HealthKit真实获取）
     private func fetchHRVData() {
         let healthStore = HKHealthStore()
         let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN)!
-        
         let now = Date()
         let startDate = Calendar.current.date(byAdding: .day, value: -1, to: now)!
-        
         let predicate = HKQuery.predicateForSamples(withStart: startDate, end: now, options: .strictStartDate)
-        
         let query = HKStatisticsQuery(
             quantityType: hrvType,
             quantitySamplePredicate: predicate,
             options: .discreteAverage
         ) { _, result, error in
-            if let result = result, let average = result.averageQuantity() {
-                let hrvValue = average.doubleValue(for: HKUnit.secondUnit(with: .milli))
-                DispatchQueue.main.async {
+            DispatchQueue.main.async {
+                self.hrvLoading = false
+                if let result = result, let average = result.averageQuantity() {
+                    let hrvValue = average.doubleValue(for: HKUnit.secondUnit(with: .milli))
                     self.hrvValue = hrvValue
+                    self.hrvError = nil
                     self.updateStressLevel(hrv: hrvValue)
+                } else if let error = error {
+                    self.hrvValue = 0
+                    self.hrvError = "HRV获取失败：\(error.localizedDescription)"
+                    self.stressLevel = "未知"
+                } else {
+                    self.hrvValue = 0
+                    self.hrvError = "未获取到HRV数据"
+                    self.stressLevel = "未知"
                 }
-            } else if let error = error {
-                print("Error fetching HRV data: \(error.localizedDescription)")
             }
         }
-        
         healthStore.execute(query)
     }
     
     // 根据 HRV 值更新压力水平
+    /// HRV值越高压力越低，常见区间：高于50低压力，30-50中等，低于30高压力
     private func updateStressLevel(hrv: Double) {
         if hrv > 50 {
             stressLevel = "低"
@@ -806,70 +862,49 @@ struct EmotionFeedbackView_Previews: PreviewProvider {
 
 // 新增情绪分析页面
 struct EmotionAnalysisView: View {
+    @EnvironmentObject var tabSelection: TabSelection
+    @ObservedObject private var profileManager = UserProfileManager.shared
     @State private var selectedTab: Int = 0
-    @State private var hrvHistory: [Double] = {
-        let calendar = Calendar.current
-        let now = Date()
-        let currentHour = calendar.component(.hour, from: now)
-        let currentMinute = calendar.component(.minute, from: now)
-        
-        // 计算从昨天同一时间到现在的总分钟数
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: now)!
-        let totalMinutes = calendar.dateComponents([.minute], from: yesterday, to: now).minute ?? 0
-        
-        // 生成更合理的HRV数据
-        var data: [Double] = []
-        var lastValue = Double.random(in: 40...60) // 初始值在正常范围内
-        
-        // 每30分钟一个数据点
-        for minute in stride(from: 0, through: totalMinutes, by: 30) {
-            let timeFactor = {
-                let hour = (minute / 60) % 24
-                return hour < 6 ? 0.8 : // 凌晨较低
-                       hour < 9 ? 1.2 : // 早晨较高
-                       hour < 12 ? 1.0 : // 上午正常
-                       hour < 14 ? 0.9 : // 中午略低
-                       hour < 18 ? 1.1 : // 下午较高
-                       hour < 21 ? 0.95 : // 晚上略低
-                       0.85 // 深夜较低
-            }()
-            
-            // 添加随机波动，但保持在合理范围内
-            let variation = Double.random(in: -5...5)
-            lastValue = max(20, min(80, lastValue * timeFactor + variation))
-            data.append(lastValue)
-        }
-        return data
-    }()
-    @State private var currentEmotion: String = "平静"
-    @State private var emotionScore: Int = 75
-    @State private var emotionDescription: String = "通过分析，你目前的情绪状态看起来平静。"
-    @State private var recommendedSongs: [(title: String, artist: String, cover: String)] = [
-        ("起风了", "买辣椒也用券", "music_cover_1"),
-        ("光年之外", "邓紫棋", "music_cover_2"),
-        ("晴天", "周杰伦", "music_cover_3"),
-        ("稻香", "周杰伦", "music_cover_4"),
-        ("夜曲", "周杰伦", "music_cover_5")
-    ]
+    @State private var hrvHistory: [Double] = []
+    @State private var currentEmotion: String = "加载中..."
+    @State private var emotionScore: Int = 0
+    @State private var emotionDescription: String = "正在分析您的情绪状态..."
     @State private var showingARGuide = false
     @State private var showCameraPermissionAlert = false
     
-    // 生成时间标签
-    private func generateTimeLabels() -> [String] {
+    private func fetchTodayMoodAndHRV() {
+        let today = Date()
+        let entries = profileManager.getMoodEntries(for: today)
+        if let latest = entries.first {
+            currentEmotion = latest.mood
+            emotionScore = MoodUtils.getScoreForEmotion(latest.mood)
+            emotionDescription = latest.emotion
+        } else {
+            currentEmotion = "暂无记录"
+            emotionScore = 0
+            emotionDescription = "今日暂无情绪记录。"
+        }
+    }
+    
+    private func fetchHRVHistory() {
+        let allEntries = profileManager.getAllMoodEntries()
+        // 取最近48小时，每30分钟一个点
         let calendar = Calendar.current
         let now = Date()
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: now)!
-        
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        
-        return [
-            formatter.string(from: yesterday),
-            "12:00",
-            "00:00",
-            "12:00",
-            formatter.string(from: now)
-        ]
+        let startDate = calendar.date(byAdding: .hour, value: -48, to: now) ?? now
+        let filtered = allEntries.filter { $0.date >= startDate }
+        // 按时间分组，每30分钟取一个点
+        let grouped = Dictionary(grouping: filtered) { entry in
+            let comp = calendar.dateComponents([.year, .month, .day, .hour], from: entry.date)
+            let minute = calendar.component(.minute, from: entry.date)
+            let halfHour = minute < 30 ? 0 : 30
+            return calendar.date(from: DateComponents(year: comp.year, month: comp.month, day: comp.day, hour: comp.hour, minute: halfHour)) ?? entry.date
+        }
+        let sortedKeys = grouped.keys.sorted()
+        hrvHistory = sortedKeys.map { key in
+            let values = grouped[key]?.map { $0.hrvValue } ?? []
+            return values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
+        }
     }
     
     var body: some View {
@@ -880,18 +915,14 @@ struct EmotionAnalysisView: View {
                     Text("当前情绪")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.gray)
-                    
                     Text(currentEmotion)
                         .font(.system(size: 36, weight: .bold))
                         .foregroundColor(.orange)
                         .padding(.bottom, 5)
-                    
-                    // 情绪分数环形进度条
                     ZStack {
                         Circle()
                             .stroke(Color.gray.opacity(0.2), lineWidth: 8)
                             .frame(width: 100, height: 100)
-                        
                         Circle()
                             .trim(from: 0, to: CGFloat(emotionScore) / 100)
                             .stroke(
@@ -900,13 +931,11 @@ struct EmotionAnalysisView: View {
                             )
                             .frame(width: 100, height: 100)
                             .rotationEffect(.degrees(-90))
-                        
                         Text("\(emotionScore)")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.orange)
                     }
                     .padding(.bottom, 5)
-                    
                     Text(emotionDescription)
                         .font(.system(size: 16))
                         .foregroundColor(.gray)
@@ -920,60 +949,49 @@ struct EmotionAnalysisView: View {
                         .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
                 )
                 .padding(.horizontal)
-                
                 // HRV历史图表
                 VStack(spacing: 15) {
                     Text("HRV 趋势")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.gray)
-                    
-                    // 统计信息
-                    HStack(spacing: 20) {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color.blue)
-                                .frame(width: 8, height: 8)
-                            Text("平均值")
-                                .font(.system(size: 12))
+                    if hrvHistory.isEmpty {
+                        VStack {
+                            Text("暂无HRV历史数据")
                                 .foregroundColor(.gray)
+                                .padding()
                         }
-                        
-                        HStack(spacing: 4) {
-                            Text("最高: \(String(format: "%.1f", hrvHistory.max() ?? 0))")
-                                .font(.system(size: 12))
-                                .foregroundColor(.gray)
-                        }
-                        
-                        HStack(spacing: 4) {
-                            Text("最低: \(String(format: "%.1f", hrvHistory.min() ?? 0))")
-                                .font(.system(size: 12))
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    .padding(.bottom, 5)
-                    
-                    // 折线图
-                    LineChartView(
-                        data: hrvHistory,
-                        average: hrvHistory.reduce(0, +) / Double(hrvHistory.count),
-                        max: hrvHistory.max() ?? 0,
-                        min: hrvHistory.min() ?? 0
-                    )
-                    .frame(height: 200)
-                    .padding(.horizontal)
-                    
-                    // 时间标签
-                    HStack {
-                        ForEach(generateTimeLabels(), id: \.self) { time in
-                            Text(time)
-                                .font(.system(size: 10))
-                                .foregroundColor(.gray)
-                            if time != generateTimeLabels().last {
-                                Spacer()
+                        .frame(height: 200)
+                    } else {
+                        HStack(spacing: 20) {
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 8, height: 8)
+                                Text("平均值")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.gray)
+                            }
+                            HStack(spacing: 4) {
+                                Text("最高: \(String(format: "%.1f", hrvHistory.max() ?? 0))")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.gray)
+                            }
+                            HStack(spacing: 4) {
+                                Text("最低: \(String(format: "%.1f", hrvHistory.min() ?? 0))")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.gray)
                             }
                         }
+                        .padding(.bottom, 5)
+                        LineChartView(
+                            data: hrvHistory,
+                            average: hrvHistory.reduce(0, +) / Double(hrvHistory.count == 0 ? 1 : hrvHistory.count),
+                            max: hrvHistory.max() ?? 0,
+                            min: hrvHistory.min() ?? 0
+                        )
+                        .frame(height: 200)
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
                 }
                 .padding()
                 .background(
@@ -982,13 +1000,11 @@ struct EmotionAnalysisView: View {
                         .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
                 )
                 .padding(.horizontal)
-                
                 // 今日总结
                 VStack(spacing: 15) {
                     Text("今日总结")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.gray)
-                    
                     VStack(alignment: .leading, spacing: 12) {
                         // 情绪分析卡片
                         VStack(alignment: .leading, spacing: 8) {
@@ -1089,277 +1105,47 @@ struct EmotionAnalysisView: View {
                         .cornerRadius(12)
                         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                         
-                        // 音乐推荐卡片
-                        VStack(alignment: .leading, spacing: 10) {
+                        // 跳转到放松室tab的卡片
+                        Button(action: { tabSelection.selectedTab = 2 }) {
                             HStack {
-                                Image(systemName: "music.note")
-                                    .foregroundColor(.purple)
-                                Text("推荐音乐")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.gray)
-                            }
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 15) {
-                                    ForEach(recommendedSongs, id: \.title) { song in
-                                        Button(action: {
-                                            if let url = URL(string: "qqmusic://") {
-                                                UIApplication.shared.open(url)
-                                            }
-                                        }) {
-                                            VStack(alignment: .leading, spacing: 8) {
-                                                ZStack {
-                                                    // 默认封面背景
-                                                    RoundedRectangle(cornerRadius: 12)
-                                                        .fill(
-                                                            LinearGradient(
-                                                                gradient: Gradient(colors: [
-                                                                    Color.purple.opacity(0.8),
-                                                                    Color.blue.opacity(0.6)
-                                                                ]),
-                                                                startPoint: .topLeading,
-                                                                endPoint: .bottomTrailing
-                                                            )
-                                                        )
-                                                        .frame(width: 160, height: 160)
-                                                    
-                                                    // 音乐图标
-                                                    Image(systemName: "music.note")
-                                                        .font(.system(size: 40))
-                                                        .foregroundColor(.white.opacity(0.8))
-                                                }
-                                                
-                                                VStack(alignment: .leading, spacing: 4) {
-                                                    Text(song.title)
-                                                        .font(.system(size: 15, weight: .medium))
-                                                        .foregroundColor(.black)
-                                                        .lineLimit(1)
-                                                    
-                                                    Text(song.artist)
-                                                        .font(.system(size: 13))
-                                                        .foregroundColor(.gray)
-                                                        .lineLimit(1)
-                                                }
-                                                .padding(.horizontal, 4)
-                                            }
-                                            .frame(width: 160)
-                                            .background(Color.white)
-                                            .cornerRadius(12)
-                                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-                                        }
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "leaf.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.white)
+                                        Text("前往放松室")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.white)
                                     }
+                                    Text("呼吸冥想 · 音乐放松 · 情绪舒缓")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.white.opacity(0.8))
                                 }
-                                .padding(.horizontal)
+                                Spacer()
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.white.opacity(0.2))
+                                        .frame(width: 40, height: 40)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.white)
+                                }
                             }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color(red: 52/255, green: 199/255, blue: 89/255),
+                                        Color(red: 32/255, green: 179/255, blue: 69/255)
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(16)
                         }
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                        
-                        // 减压活动卡片组
-                        VStack(spacing: 12) {
-                            // 运动减压卡片
-                            Button(action: {
-                                if let url = URL(string: "keep://") {
-                                    UIApplication.shared.open(url)
-                                }
-                            }) {
-                                HStack {
-                                    // 左侧内容
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 8) {
-                                            Image(systemName: "figure.run")
-                                                .font(.system(size: 20))
-                                                .foregroundColor(.white)
-                                            
-                                            Text("运动减压")
-                                                .font(.system(size: 16, weight: .medium))
-                                                .foregroundColor(.white)
-                                        }
-                                        
-                                        Text("瑜伽 · 冥想 · 慢跑")
-                                            .font(.system(size: 13))
-                                            .foregroundColor(.white.opacity(0.8))
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    // 右侧装饰
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.white.opacity(0.2))
-                                            .frame(width: 40, height: 40)
-                                        
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .padding()
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color(red: 255/255, green: 159/255, blue: 10/255),
-                                            Color(red: 255/255, green: 149/255, blue: 0/255)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .cornerRadius(16)
-                            }
-                            
-                            // 正念投影卡片
-                            Button(action: {
-                                startMindfulnessProjection()
-                            }) {
-                                HStack {
-                                    // 左侧内容
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 8) {
-                                            Image(systemName: "person.fill.viewfinder")
-                                                .font(.system(size: 20))
-                                                .foregroundColor(.white)
-                                            
-                                            Text("正念投影")
-                                                .font(.system(size: 16, weight: .medium))
-                                                .foregroundColor(.white)
-                                        }
-                                        
-                                        Text("AR冥想导师 · 实时呼吸引导")
-                                            .font(.system(size: 13))
-                                            .foregroundColor(.white.opacity(0.8))
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    // 右侧装饰
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.white.opacity(0.2))
-                                            .frame(width: 40, height: 40)
-                                        
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .padding()
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color(red: 0/255, green: 122/255, blue: 255/255),
-                                            Color(red: 0/255, green: 102/255, blue: 235/255)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .cornerRadius(16)
-                            }
-                            .sheet(isPresented: $showingARGuide) {
-                                ARMeditationGuideView()
-                            }
-                            
-                            // 冥想训练卡片
-                            Button(action: {
-                                if let url = URL(string: "keep://") {
-                                    UIApplication.shared.open(url)
-                                }
-                            }) {
-                                HStack {
-                                    // 左侧内容
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 8) {
-                                            Image(systemName: "brain.head.profile")
-                                                .font(.system(size: 20))
-                                                .foregroundColor(.white)
-                                            
-                                            Text("冥想训练")
-                                                .font(.system(size: 16, weight: .medium))
-                                                .foregroundColor(.white)
-                                        }
-                                        
-                                        Text("专注当下 · 觉察情绪")
-                                            .font(.system(size: 13))
-                                            .foregroundColor(.white.opacity(0.8))
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    // 右侧装饰
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.white.opacity(0.2))
-                                            .frame(width: 40, height: 40)
-                                        
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .padding()
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color(red: 175/255, green: 82/255, blue: 222/255),
-                                            Color(red: 155/255, green: 62/255, blue: 202/255)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .cornerRadius(16)
-                            }
-                            
-                            // AI倾诉对话卡片
-                            NavigationLink(destination: VoiceInteractionView()) {
-                                HStack {
-                                    // 左侧内容
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 8) {
-                                            Image(systemName: "bubble.left.and.bubble.right.fill")
-                                                .font(.system(size: 20))
-                                                .foregroundColor(.white)
-                                            
-                                            Text("AI倾诉对话")
-                                                .font(.system(size: 16, weight: .medium))
-                                                .foregroundColor(.white)
-                                        }
-                                        
-                                        Text("语音 · 文字 · 表情")
-                                            .font(.system(size: 13))
-                                            .foregroundColor(.white.opacity(0.8))
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    // 右侧装饰
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.white.opacity(0.2))
-                                            .frame(width: 40, height: 40)
-                                        
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .padding()
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color(red: 52/255, green: 199/255, blue: 89/255),
-                                            Color(red: 32/255, green: 179/255, blue: 69/255)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .cornerRadius(16)
-                            }
-                        }
+                        .padding(.horizontal)
                     }
                     .padding(.horizontal)
                 }
@@ -1426,97 +1212,103 @@ struct LineChartView: View {
     let min: Double
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // 背景网格
-                VStack(spacing: 0) {
-                    ForEach(0..<5) { i in
+        if data.isEmpty {
+            Text("暂无数据")
+                .foregroundColor(.gray)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            GeometryReader { geometry in
+                ZStack {
+                    // 背景网格
+                    VStack(spacing: 0) {
+                        ForEach(0..<5) { i in
+                            Divider()
+                                .background(Color.gray.opacity(0.2))
+                            Spacer()
+                        }
                         Divider()
                             .background(Color.gray.opacity(0.2))
-                        Spacer()
                     }
-                    Divider()
-                        .background(Color.gray.opacity(0.2))
-                }
-                
-                // 渐变背景
-                Path { path in
-                    let width = geometry.size.width / CGFloat(data.count - 1)
-                    let height = geometry.size.height
                     
-                    path.move(to: CGPoint(x: 0, y: height))
+                    // 渐变背景
+                    Path { path in
+                        let width = geometry.size.width / CGFloat(data.count - 1)
+                        let height = geometry.size.height
+                        
+                        path.move(to: CGPoint(x: 0, y: height))
+                        
+                        for index in 0..<data.count {
+                            let x = width * CGFloat(index)
+                            let y = height * (1 - CGFloat(data[index] / 100))
+                            if index == 0 {
+                                path.move(to: CGPoint(x: x, y: y))
+                            } else {
+                                path.addLine(to: CGPoint(x: x, y: y))
+                            }
+                        }
+                        
+                        // 闭合路径到底部
+                        path.addLine(to: CGPoint(x: geometry.size.width, y: height))
+                        path.addLine(to: CGPoint(x: 0, y: height))
+                        path.closeSubpath()
+                    }
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.blue.opacity(0.2),
+                                Color.blue.opacity(0.1),
+                                Color.blue.opacity(0.05)
+                            ]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
                     
-                    for index in 0..<data.count {
-                        let x = width * CGFloat(index)
-                        let y = height * (1 - CGFloat(data[index] / 100))
-                        if index == 0 {
-                            path.move(to: CGPoint(x: x, y: y))
-                        } else {
+                    // 平均值线
+                    Path { path in
+                        let y = geometry.size.height * (1 - CGFloat(average / 100))
+                        path.move(to: CGPoint(x: 0, y: y))
+                        path.addLine(to: CGPoint(x: geometry.size.width, y: y))
+                    }
+                    .stroke(Color.blue, style: StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                    
+                    // 折线图
+                    Path { path in
+                        let width = geometry.size.width / CGFloat(data.count - 1)
+                        let height = geometry.size.height
+                        
+                        path.move(to: CGPoint(x: 0, y: height * (1 - CGFloat(data[0] / 100))))
+                        
+                        for index in 1..<data.count {
+                            let x = width * CGFloat(index)
+                            let y = height * (1 - CGFloat(data[index] / 100))
                             path.addLine(to: CGPoint(x: x, y: y))
                         }
                     }
-                    
-                    // 闭合路径到底部
-                    path.addLine(to: CGPoint(x: geometry.size.width, y: height))
-                    path.addLine(to: CGPoint(x: 0, y: height))
-                    path.closeSubpath()
-                }
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.blue.opacity(0.2),
-                            Color.blue.opacity(0.1),
-                            Color.blue.opacity(0.05)
-                        ]),
-                        startPoint: .top,
-                        endPoint: .bottom
+                    .stroke(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.blue,
+                                Color.blue.opacity(0.7)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
                     )
-                )
-                
-                // 平均值线
-                Path { path in
-                    let y = geometry.size.height * (1 - CGFloat(average / 100))
-                    path.move(to: CGPoint(x: 0, y: y))
-                    path.addLine(to: CGPoint(x: geometry.size.width, y: y))
-                }
-                .stroke(Color.blue, style: StrokeStyle(lineWidth: 1, dash: [5, 5]))
-                
-                // 折线图
-                Path { path in
-                    let width = geometry.size.width / CGFloat(data.count - 1)
-                    let height = geometry.size.height
                     
-                    path.move(to: CGPoint(x: 0, y: height * (1 - CGFloat(data[0] / 100))))
-                    
-                    for index in 1..<data.count {
+                    // 数据点
+                    ForEach(0..<data.count, id: \.self) { index in
+                        let width = geometry.size.width / CGFloat(data.count - 1)
+                        let height = geometry.size.height
                         let x = width * CGFloat(index)
                         let y = height * (1 - CGFloat(data[index] / 100))
-                        path.addLine(to: CGPoint(x: x, y: y))
+                        
+                        Circle()
+                            .fill(Color.blue)
+                            .frame(width: 6, height: 6)
+                            .position(x: x, y: y)
                     }
-                }
-                .stroke(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.blue,
-                            Color.blue.opacity(0.7)
-                        ]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
-                )
-                
-                // 数据点
-                ForEach(0..<data.count, id: \.self) { index in
-                    let width = geometry.size.width / CGFloat(data.count - 1)
-                    let height = geometry.size.height
-                    let x = width * CGFloat(index)
-                    let y = height * (1 - CGFloat(data[index] / 100))
-                    
-                    Circle()
-                        .fill(Color.blue)
-                        .frame(width: 6, height: 6)
-                        .position(x: x, y: y)
                 }
             }
         }

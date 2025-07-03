@@ -1,3 +1,24 @@
+//
+//  OnboardingView.swift
+//  Xinyu
+//
+//  @fileoverview
+//  首次启动引导页（OnboardingView）
+//  ---------------------------------
+//  用途：
+//    - 该视图用于首次启动时引导用户填写基本信息和MBTI问卷。
+//    - 仅在用户首次使用时弹出，填写完成后自动关闭并保存信息。
+//  使用方法：
+//    - 在主界面（如MyApp.swift或ContentView.swift）中，判断用户是否已完成引导，未完成时弹出本视图。
+//    - 依赖UserProfileManager管理用户信息和引导状态。
+//  主要功能：
+//    - 多步表单收集昵称、性别、生日、职业、MBTI类型
+//    - 支持MBTI自测，自动计算类型
+//    - 表单校验，未填写完整无法进入下一步
+//    - 完成后保存信息并关闭引导页
+//  维护人：[Your Name]
+//  @stable - 请勿修改核心流程
+//
 import SwiftUI
 
 struct OnboardingView: View {

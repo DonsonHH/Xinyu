@@ -4,6 +4,7 @@ import Combine
 struct MainTabView: View {
     @ObservedObject private var themeManager = ThemeManager.shared
     @StateObject private var tabSelection = TabSelection()
+    @State private var splashPhase = true
     
     init() {
         let appearance = UITabBarAppearance()
@@ -22,39 +23,45 @@ struct MainTabView: View {
     }
 
     var body: some View {
-            TabView(selection: $tabSelection.selectedTab) {
-                ContentView()
-                    .tabItem {
-                        Image(systemName: "sun.max.fill")
-                        Text("今天")
+        ZStack {
+            if splashPhase {
+                ContentView(splashPhase: $splashPhase)
+            } else {
+                TabView(selection: $tabSelection.selectedTab) {
+                    ContentView(splashPhase: $splashPhase)
+                        .tabItem {
+                            Image(systemName: "sun.max.fill")
+                            Text("今天")
+                        }
+                        .tag(0)
+                    VoiceInteractionView()
+                        .tabItem {
+                            Image(systemName: "waveform")
+                            Text("倾听")
+                        }
+                        .tag(1)
+                    NavigationView {
+                        RelaxRoomView()
                     }
-                    .tag(0)
-                VoiceInteractionView()
                     .tabItem {
-                        Image(systemName: "waveform")
-                        Text("倾听")
+                        Image(systemName: "face.smiling")
+                        Text("放松室")
                     }
-                    .tag(1)
-                NavigationView {
-                    RelaxRoomView()
+                    .tag(2)
+                    NavigationView {
+                        MoodAnalysisView()
+                    }
+                    .tabItem {
+                        Image(systemName: "person.crop.circle")
+                        Text("心迹")
+                    }
+                    .tag(3)
                 }
-                .tabItem {
-                    Image(systemName: "face.smiling")
-                    Text("放松室")
-                }
-                .tag(2)
-                NavigationView {
-                    MoodAnalysisView()
-                }
-                .tabItem {
-                    Image(systemName: "person.crop.circle")
-                    Text("心迹")
-                }
-                .tag(3)
+                .tint(Color(red: 255/255, green: 159/255, blue: 10/255))
+                .background(themeManager.globalBackgroundColor.ignoresSafeArea())
+                .environmentObject(tabSelection)
             }
-        .accentColor(Color.orange)
-            .background(themeManager.globalBackgroundColor.ignoresSafeArea())
-        .environmentObject(tabSelection)
+        }
     }
 }
 
