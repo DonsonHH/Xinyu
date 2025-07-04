@@ -298,6 +298,7 @@ struct GameView: View {
                     }
                 }
             }
+            .toolbar(.hidden, for: .tabBar)
         }
         .sheet(isPresented: $showingRules) {
             RulesView()
@@ -312,6 +313,7 @@ struct GameView: View {
                 }
             }
         }
+        .navigationBarHidden(true)
     }
     
     // 抽牌动画

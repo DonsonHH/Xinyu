@@ -10,20 +10,22 @@ struct NMOGameView: View {
     @State private var animateCards = false
     
     var body: some View {
-        ZStack {
-            backgroundView
-            if !showGame && !showRules {
-                mainContentView
-                    .toolbar(.hidden, for: .tabBar)
-            } else {
-                mainContentView
+        NavigationStack {
+            ZStack {
+                backgroundView
+                if !showGame && !showRules {
+                    mainContentView
+                        .toolbar(.hidden, for: .tabBar)
+                } else {
+                    mainContentView
+                }
             }
-        }
-        .fullScreenCover(isPresented: $showGame) {
-            GameView() // 不隐藏TabBar
-        }
-        .sheet(isPresented: $showRules) {
-            RulesView()
+            .fullScreenCover(isPresented: $showGame) {
+                GameView() // 不隐藏TabBar
+            }
+            .sheet(isPresented: $showRules) {
+                RulesView()
+            }
         }
     }
 

@@ -67,6 +67,23 @@ struct VoiceInteractionView: View {
     @State private var waveformPoints: [CGFloat] = Array(repeating: 0.5, count: 40)
     @State private var waveformLineTimer: Timer?
     
+    @EnvironmentObject var tabSelection: TabSelection
+    @State private var showRelaxRoomButton = false
+    @State private var showRelaxRoomAnimation = false
+    @State private var isCardRolling = false
+    @State private var rollingCards: [RelaxFunction] = []
+    @State private var cardRollingTimer: Timer? = nil
+    
+    // 1. 引入用户资料管理器
+    @ObservedObject private var profileManager = UserProfileManager.shared
+    
+    // 1. 新增弹窗和跳转状态
+    @State private var showMeditationGuide = false
+    @State private var showNMOGame = false
+    
+    // 新增治愈音乐弹窗状态
+    @State private var showHealingMusicAlert = false
+    
     // MARK: - 视图主体
     var body: some View {
         NavigationStack {
@@ -113,6 +130,9 @@ struct VoiceInteractionView: View {
         .onDisappear(perform: cleanupView)
         .onChange(of: messages) { newMessages in
             speakLatestAImessageIfNeeded(messages: newMessages)
+        }
+        .onChange(of: tabSelection.selectedTab) { _ in
+            ttsManager.stopSpeaking()
         }
         .alert(isPresented: $showingPermissionAlert) {
             Alert(
@@ -383,6 +403,81 @@ struct VoiceInteractionView: View {
                         MessageBubble(message: ChatMessage(content: currentResponse, isUser: false, isThinking: true))
                             .id("streaming")
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    }
+                    if showRelaxRoomAnimation || isCardRolling {
+                        HStack(spacing: 12) {
+                            Image("cat_avatar")
+                                .resizable()
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.orange))
+                                .frame(width: 22, height: 22)
+                            Text("小猫咪正在为您推荐放松方式…")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.top, 8)
+                        .padding(.bottom, 2)
+                        .frame(maxWidth: .infinity)
+                        // 卡片乱转
+                        HStack(spacing: 16) {
+                            ForEach(rollingCards, id: \.self) { funcType in
+                                RelaxFunctionButton(
+                                    type: funcType,
+                                    onMeditation: { showMeditationGuide = true },
+                                    onNMOGame: { showNMOGame = true },
+                                    onAIChat: { withAnimation(.spring()) { tabSelection.selectedTab = 1 } },
+                                    onHealingMusic: { showHealingMusicAlert = true }
+                                )
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .frame(maxWidth: .infinity)
+                    } else if showRelaxRoomButton {
+                        HStack(spacing: 12) {
+                            Image("cat_avatar")
+                                .resizable()
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+                            Text("小猫咪为您精心推荐了以下一些放松方式捏")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.top, 8)
+                        .padding(.bottom, 2)
+                        .frame(maxWidth: .infinity)
+                        // 定格后显示最后一次rollingCards
+                        HStack(spacing: 16) {
+                            ForEach(rollingCards, id: \.self) { funcType in
+                                RelaxFunctionButton(
+                                    type: funcType,
+                                    onMeditation: { showMeditationGuide = true },
+                                    onNMOGame: { showNMOGame = true },
+                                    onAIChat: { withAnimation(.spring()) { tabSelection.selectedTab = 1 } },
+                                    onHealingMusic: { showHealingMusicAlert = true }
+                                )
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .frame(maxWidth: .infinity)
+                        // 3. 弹窗和跳转
+                        .sheet(isPresented: $showMeditationGuide) {
+                            ARMeditationGuideView()
+                        }
+                        .sheet(isPresented: $showNMOGame) {
+                            NMOGameView()
+                        }
+                        .alert("前往放松室听治愈音乐", isPresented: $showHealingMusicAlert) {
+                            Button("前往", role: .none) {
+                                withAnimation(.spring()) { tabSelection.selectedTab = 2 }
+                            }
+                            Button("取消", role: .cancel) {}
+                        } message: {
+                            Text("放松室为你准备了精选治愈音乐，快去体验吧！")
+                        }
                     }
                 }
                 .padding(.horizontal, 8)
@@ -680,29 +775,8 @@ struct VoiceInteractionView: View {
         let messageContent = textInput
         textInput = ""
         Task {
-            // 1. 如果是新会话的第一条消息，立即创建卡片
-            if messages.isEmpty {
-                let newId = UUID()
-                let userMessage = ChatMessage(content: messageContent, isUser: true, timestamp: Date())
-                let session = ChatSession(
-                    id: newId,
-                    title: "新对话",
-                    summary: "暂无摘要",
-                    startTime: Date(),
-                    endTime: Date(),
-                    messages: [userMessage],
-                    isArchived: false
-                )
-                ChatHistoryManager.shared.upsertChatSession(session)
-                currentSessionId = newId
-                sessionStartTime = Date()
-                await MainActor.run {
-                    messages = [userMessage]
-                }
-                await sendMessage(content: messageContent, isFirstAIReply: true)
-            } else {
-                await sendMessage(content: messageContent, isFirstAIReply: false)
-            }
+            // 直接调用sendMessage，由sendMessage统一处理用户消息添加
+            await sendMessage(content: messageContent, isFirstAIReply: messages.isEmpty)
         }
     }
     
@@ -730,6 +804,27 @@ struct VoiceInteractionView: View {
                 messages.append(botMessage)
                 isStreaming = false
                 print("[DEBUG] AI消息已添加: \(currentResponse)")
+                // 每次AI回复后都执行卡片轮转
+                showRelaxRoomAnimation = true
+                showRelaxRoomButton = false
+                isCardRolling = true
+                // 启动卡片乱转定时器
+                cardRollingTimer?.invalidate()
+                cardRollingTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { _ in
+                    let allFunctions: [RelaxFunction] = [
+                        .exercise, .mindfulness, .meditation, .nmoGame, .healingMusic
+                    ]
+                    let randomCount = 3
+                    rollingCards = Array(allFunctions.shuffled().prefix(randomCount))
+                }
+                // 5秒后定格
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                    cardRollingTimer?.invalidate()
+                    cardRollingTimer = nil
+                    isCardRolling = false
+                    showRelaxRoomAnimation = false
+                    showRelaxRoomButton = true
+                }
             }
             // 只在内容变化时才生成摘要
             let currentContent = messages.map { $0.content }.joined(separator: "\n")
@@ -1234,6 +1329,8 @@ struct MessageBubble: View {
     let message: ChatMessage
     @State private var showActionBubble = false
     @State private var showingCopySuccess = false
+    // 2. 用户头像状态
+    @State private var userProfileImage: UIImage? = nil
     
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -1250,10 +1347,28 @@ struct MessageBubble: View {
                         .cornerRadius(22)
                         .shadow(color: Color(red: 255/255, green: 159/255, blue: 10/255).opacity(0.08), radius: 4, x: 0, y: 2)
                 }
-                Image(systemName: "person.crop.circle.fill")
-                    .resizable()
-                    .frame(width: 36, height: 36)
-                    .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                // 3. 用户头像显示逻辑
+                Group {
+                    if let image = userProfileImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 36, height: 36)
+                            .clipShape(Circle())
+                    } else {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .frame(width: 36, height: 36)
+                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    }
+                }
+                .onAppear {
+                    // 4. 加载头像（与ProfileView一致）
+                    if let imageData = UserDefaults.standard.data(forKey: "profileImage"),
+                       let uiImage = UIImage(data: imageData) {
+                        userProfileImage = uiImage
+                    }
+                }
             } else {
                 Image("cat_avatar")
                     .resizable()
@@ -1296,5 +1411,63 @@ struct RoundedCorner: Shape {
     func path(in rect: CGRect) -> Path {
         let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
         return Path(path.cgPath)
+    }
+}
+
+// 4. 定义功能类型和按钮视图
+fileprivate enum RelaxFunction: String, CaseIterable, Hashable {
+    case exercise, mindfulness, meditation, nmoGame, aiChat, healingMusic
+}
+
+fileprivate struct RelaxFunctionButton: View {
+    let type: RelaxFunction
+    let onMeditation: () -> Void
+    let onNMOGame: () -> Void
+    let onAIChat: () -> Void
+    let onHealingMusic: () -> Void
+    
+    var body: some View {
+        let (icon, title, subtitle, colors, action): (String, String, String, [Color], () -> Void) = {
+            switch type {
+            case .exercise:
+                return ("figure.run", "运动减压", "舒展身体，释放压力", [Color(red: 255/255, green: 159/255, blue: 10/255), Color(red: 255/255, green: 149/255, blue: 0/255)], {
+                    if let url = URL(string: "keep://") { UIApplication.shared.open(url) }
+                })
+            case .mindfulness:
+                return ("person.fill.viewfinder", "正念投影", "AR冥想导师", [Color(red: 0/255, green: 122/255, blue: 255/255), Color(red: 0/255, green: 102/255, blue: 235/255)], onMeditation)
+            case .meditation:
+                return ("brain.head.profile", "冥想训练", "专注当下，觉察自我", [Color(red: 175/255, green: 82/255, blue: 222/255), Color(red: 155/255, green: 62/255, blue: 202/255)], {
+                    if let url = URL(string: "keep://") { UIApplication.shared.open(url) }
+                })
+            case .nmoGame:
+                return ("gamecontroller.fill", "NMO小游戏", "放松心情，轻松一刻", [Color(red: 255/255, green: 204/255, blue: 0/255), Color(red: 255/255, green: 159/255, blue: 10/255)], onNMOGame)
+            case .aiChat:
+                return ("bubble.left.and.bubble.right.fill", "AI倾诉对话", "语音、文字、表情陪伴你", [Color(red: 52/255, green: 199/255, blue: 89/255), Color(red: 32/255, green: 179/255, blue: 69/255)], onAIChat)
+            case .healingMusic:
+                return ("music.note.list", "治愈音乐推荐", "精选舒缓音乐", [Color.purple, Color.blue], onHealingMusic)
+            }
+        }()
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 28))
+                    .foregroundColor(.white)
+                    .padding(.top, 10)
+                Text(title)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.white)
+                Text(subtitle)
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+            .frame(width: 100, height: 100)
+            .background(
+                LinearGradient(gradient: Gradient(colors: colors), startPoint: .topLeading, endPoint: .bottomTrailing)
+            )
+            .cornerRadius(18)
+            .shadow(color: colors.first?.opacity(0.13) ?? .black.opacity(0.13), radius: 8, x: 0, y: 2)
+        }
     }
 } 

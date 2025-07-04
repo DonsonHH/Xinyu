@@ -56,58 +56,60 @@ struct RelaxRoomView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .top) {
-            // 柔和渐变背景+装饰圆
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 255/255, green: 250/255, blue: 240/255),
-                    Color(red: 255/255, green: 236/255, blue: 210/255)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            Circle()
-                .fill(Color(red: 255/255, green: 220/255, blue: 180/255).opacity(0.18))
-                .frame(width: 220, height: 220)
-                .offset(x: -80, y: -80)
-            Circle()
-                .fill(Color(red: 180/255, green: 220/255, blue: 255/255).opacity(0.12))
-                .frame(width: 180, height: 180)
-                .offset(x: 120, y: 60)
-            
-            ScrollView {
-                VStack(spacing: 36) {
-                    // 顶部欢迎语和插画
-                    RelaxRoomHeaderView()
-                    QQMusicRecommendView(songs: selectedSongs, player: $player, showPlayError: $showPlayError, onRefresh: refreshSongs)
-                    // 功能卡片组
-                    FunctionCardGroupView(tabSelection: tabSelection)
-                    // 底部温馨祝福
-                    VStack(spacing: 8) {
-                        Text("祝你拥有温柔的一天 ☀️")
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                            .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
-                        Text("—— 心语AI陪伴你")
-                            .font(.system(size: 13))
-                            .foregroundColor(.gray)
+        NavigationStack {
+            ZStack(alignment: .top) {
+                // 柔和渐变背景+装饰圆
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 255/255, green: 250/255, blue: 240/255),
+                        Color(red: 255/255, green: 236/255, blue: 210/255)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                Circle()
+                    .fill(Color(red: 255/255, green: 220/255, blue: 180/255).opacity(0.18))
+                    .frame(width: 220, height: 220)
+                    .offset(x: -80, y: -80)
+                Circle()
+                    .fill(Color(red: 180/255, green: 220/255, blue: 255/255).opacity(0.12))
+                    .frame(width: 180, height: 180)
+                    .offset(x: 120, y: 60)
+                
+                ScrollView {
+                    VStack(spacing: 36) {
+                        // 顶部欢迎语和插画
+                        RelaxRoomHeaderView()
+                        QQMusicRecommendView(songs: selectedSongs, player: $player, showPlayError: $showPlayError, onRefresh: refreshSongs)
+                        // 功能卡片组
+                        FunctionCardGroupView(tabSelection: tabSelection)
+                        // 底部温馨祝福
+                        VStack(spacing: 8) {
+                            Text("祝你拥有温柔的一天 ☀️")
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                            Text("—— 心语AI陪伴你")
+                                .font(.system(size: 13))
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.top, 30)
+                        .padding(.bottom, 40)
                     }
-                    .padding(.top, 30)
-                    .padding(.bottom, 40)
                 }
             }
+            .onAppear {
+                fetcher.fetchSongs()
+            }
+            .onChange(of: fetcher.songs) { _ in
+                refreshSongs()
+            }
+            .alert("播放失败，可能是歌曲地址已失效或不支持播放", isPresented: $showPlayError) {
+                Button("确定", role: .cancel) {}
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
         }
-        .onAppear {
-            fetcher.fetchSongs()
-        }
-        .onChange(of: fetcher.songs) { _ in
-            refreshSongs()
-        }
-        .alert("播放失败，可能是歌曲地址已失效或不支持播放", isPresented: $showPlayError) {
-            Button("确定", role: .cancel) {}
-        }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
