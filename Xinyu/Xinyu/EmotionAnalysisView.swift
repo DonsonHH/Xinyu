@@ -477,6 +477,7 @@ struct EmotionAnalysisView: View {
                                 Text("情绪分析")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.gray)
+                                Spacer()
                             }
                             
                             Text("根据您的HRV数据和情绪记录分析：")
@@ -492,6 +493,7 @@ struct EmotionAnalysisView: View {
                                     Text(getStressLevelAnalysis())
                                         .font(.system(size: 14))
                                         .foregroundColor(.gray)
+                                    Spacer()
                                 }
                                 
                                 // 基于情绪记录的分析
@@ -502,6 +504,7 @@ struct EmotionAnalysisView: View {
                                     Text(getEmotionAnalysis())
                                         .font(.system(size: 14))
                                         .foregroundColor(.gray)
+                                    Spacer()
                                 }
                                 
                                 // 基于数据给出的建议
@@ -512,6 +515,7 @@ struct EmotionAnalysisView: View {
                                     Text(getRecommendation())
                                         .font(.system(size: 14))
                                         .foregroundColor(.gray)
+                                    Spacer()
                                 }
                             }
                         }
@@ -528,59 +532,47 @@ struct EmotionAnalysisView: View {
                                 Text("情绪趋势")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.gray)
+                                Spacer()
                             }
                             
-                            Text("今日情绪变化轨迹：")
-                                .font(.system(size: 14))
-                                .foregroundColor(.gray)
-                            
-                            // 基于真实数据的情绪趋势
-                            let todayTrend = getTodayEmotionTrend()
-                            
-                            if todayTrend.isEmpty {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack(spacing: 8) {
-                                        Circle()
-                                            .fill(Color.gray.opacity(0.3))
-                                            .frame(width: 6, height: 6)
-                                        Text("暂无情绪记录，建议开始记录您的情绪状态")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(.gray)
-                                    }
+                            HStack(spacing: 15) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("早晨")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.gray)
+                                    Text("平静")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.blue)
                                 }
-                                .padding(.vertical, 4)
-                            } else {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack(spacing: 15) {
-                                        ForEach(Array(todayTrend.enumerated()), id: \.offset) { index, trend in
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(trend.time)
-                                                    .font(.system(size: 12))
-                                                    .foregroundColor(.gray)
-                                                Text(trend.emotion)
-                                                    .font(.system(size: 14, weight: .medium))
-                                                    .foregroundColor(MoodUtils.getMoodColor(trend.emotion))
-                                            }
-                                            
-                                            if index < todayTrend.count - 1 {
-                                                Image(systemName: "arrow.right")
-                                                    .foregroundColor(.gray)
-                                            }
-                                        }
-                                    }
-                                    .padding(.vertical, 4)
-                                    
-                                    // 添加趋势分析
-                                    HStack(spacing: 8) {
-                                        Circle()
-                                            .fill(Color.green.opacity(0.7))
-                                            .frame(width: 6, height: 6)
-                                        Text("情绪记录已更新，继续保持记录习惯")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(.gray)
-                                    }
+                                
+                                Image(systemName: "arrow.right")
+                                    .foregroundColor(.gray)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("中午")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.gray)
+                                    Text("开心")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.orange)
                                 }
+                                
+                                Image(systemName: "arrow.right")
+                                    .foregroundColor(.gray)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("现在")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.gray)
+                                    Text("平静")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.blue)
+                                }
+                                
+                                Spacer()
                             }
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding()
                         .background(Color.white)
