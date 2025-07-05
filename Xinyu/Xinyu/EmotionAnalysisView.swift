@@ -3,6 +3,12 @@ import AVFoundation
 import ARKit
 import HealthKit
 
+// 情绪趋势数据结构
+struct EmotionTrend {
+    let time: String
+    let emotion: String
+}
+
 // 情绪分析页面
 struct EmotionAnalysisView: View {
     @EnvironmentObject var tabSelection: TabSelection
@@ -139,6 +145,106 @@ struct EmotionAnalysisView: View {
             // 很低HRV，很高压力
             return "生气"
         }
+    }
+    
+    // 基于真实HRV数据的压力水平分析
+    private func getStressLevelAnalysis() -> String {
+        if hrvValue > 0 {
+            switch stressLevel {
+            case "低":
+                return "HRV数据显示压力水平较低，身心状态良好"
+            case "中":
+                return "HRV数据显示压力水平适中，建议适当放松"
+            case "高":
+                return "HRV数据显示压力水平较高，建议重视放松调节"
+            default:
+                return "HRV数据无法准确评估，建议多关注身心状态"
+            }
+        } else {
+            return "暂无HRV数据，无法评估当前压力水平"
+        }
+    }
+    
+    // 基于用户情绪记录的分析
+    private func getEmotionAnalysis() -> String {
+        let today = Date()
+        let todayEntries = profileManager.getMoodEntries(for: today)
+        let recentEntries = profileManager.getAllMoodEntries().prefix(7) // 最近7条记录
+        
+        if todayEntries.isEmpty {
+            if recentEntries.isEmpty {
+                return "暂无情绪记录，建议开始记录您的情绪状态"
+            } else {
+                return "今日暂无情绪记录，可参考历史情绪趋势"
+            }
+        } else if todayEntries.count == 1 {
+            return "今日有1条情绪记录，建议多次记录以了解情绪变化"
+        } else {
+            let moodCounts = Dictionary(grouping: todayEntries) { $0.mood }
+            let dominantMood = moodCounts.max { $0.value.count < $1.value.count }?.key ?? "未知"
+            return "今日有\(todayEntries.count)条情绪记录，主要情绪为\(dominantMood)"
+        }
+    }
+    
+    // 基于数据给出的建议
+    private func getRecommendation() -> String {
+        let hasHRV = hrvValue > 0
+        let hasEmotionRecords = !profileManager.getMoodEntries(for: Date()).isEmpty
+        
+        if hasHRV && stressLevel == "高" {
+            return "建议进行深呼吸、冥想或轻度运动来降低压力"
+        } else if hasHRV && stressLevel == "中" {
+            return "保持当前状态，可适当进行放松活动"
+        } else if hasHRV && stressLevel == "低" {
+            return "状态良好，继续保持健康的生活方式"
+        } else if hasEmotionRecords {
+            let currentEmotionLower = currentEmotion.lowercased()
+            if ["焦虑", "生气", "悲伤"].contains(currentEmotion) {
+                return "建议通过放松室的冥想功能来调节情绪"
+            } else {
+                return "情绪状态不错，继续保持积极心态"
+            }
+        } else {
+            return "建议开始记录情绪并关注心率变异性数据"
+        }
+    }
+    
+    // 获取今日情绪趋势
+    private func getTodayEmotionTrend() -> [EmotionTrend] {
+        let today = Date()
+        let todayEntries = profileManager.getMoodEntries(for: today).sorted { $0.date < $1.date }
+        
+        guard !todayEntries.isEmpty else {
+            return []
+        }
+        
+        var trends: [EmotionTrend] = []
+        let calendar = Calendar.current
+        
+        for entry in todayEntries {
+            let hour = calendar.component(.hour, from: entry.date)
+            let timeText: String
+            
+            if hour < 12 {
+                timeText = "早晨"
+            } else if hour < 18 {
+                timeText = "下午"
+            } else {
+                timeText = "晚上"
+            }
+            
+            // 避免重复相同时间段
+            if !trends.contains(where: { $0.time == timeText }) {
+                trends.append(EmotionTrend(time: timeText, emotion: entry.mood))
+            }
+        }
+        
+        // 如果只有一条记录，添加"现在"
+        if trends.count == 1 {
+            trends.append(EmotionTrend(time: "现在", emotion: currentEmotion))
+        }
+        
+        return trends
     }
     
     private func fetchHRVHistory() {
@@ -378,29 +484,32 @@ struct EmotionAnalysisView: View {
                                 .foregroundColor(.gray)
                             
                             VStack(alignment: .leading, spacing: 6) {
+                                // 基于真实HRV数据的分析
                                 HStack(spacing: 8) {
                                     Circle()
-                                        .fill(Color.orange)
+                                        .fill(hrvValue > 0 ? hrvColor(for: stressLevel) : Color.gray)
                                         .frame(width: 6, height: 6)
-                                    Text("今日压力水平处于中等状态，建议适当放松")
+                                    Text(getStressLevelAnalysis())
                                         .font(.system(size: 14))
                                         .foregroundColor(.gray)
                                 }
                                 
+                                // 基于情绪记录的分析
                                 HStack(spacing: 8) {
                                     Circle()
                                         .fill(Color.blue)
                                         .frame(width: 6, height: 6)
-                                    Text("情绪波动较为平稳，但仍有提升空间")
+                                    Text(getEmotionAnalysis())
                                         .font(.system(size: 14))
                                         .foregroundColor(.gray)
                                 }
                                 
+                                // 基于数据给出的建议
                                 HStack(spacing: 8) {
                                     Circle()
                                         .fill(Color.green)
                                         .frame(width: 6, height: 6)
-                                    Text("建议通过以下方式调节情绪：")
+                                    Text(getRecommendation())
                                         .font(.system(size: 14))
                                         .foregroundColor(.gray)
                                 }
@@ -410,7 +519,7 @@ struct EmotionAnalysisView: View {
                         .background(Color.white)
                         .cornerRadius(12)
                         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                        
+ 
                         // 情绪趋势卡片
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
@@ -421,41 +530,57 @@ struct EmotionAnalysisView: View {
                                     .foregroundColor(.gray)
                             }
                             
-                            HStack(spacing: 15) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("早晨")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.gray)
-                                    Text("平静")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(.blue)
+                            Text("今日情绪变化轨迹：")
+                                .font(.system(size: 14))
+                                .foregroundColor(.gray)
+                            
+                            // 基于真实数据的情绪趋势
+                            let todayTrend = getTodayEmotionTrend()
+                            
+                            if todayTrend.isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack(spacing: 8) {
+                                        Circle()
+                                            .fill(Color.gray.opacity(0.3))
+                                            .frame(width: 6, height: 6)
+                                        Text("暂无情绪记录，建议开始记录您的情绪状态")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.gray)
+                                    }
                                 }
-                                
-                                Image(systemName: "arrow.right")
-                                    .foregroundColor(.gray)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("中午")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.gray)
-                                    Text("开心")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(.orange)
-                                }
-                                
-                                Image(systemName: "arrow.right")
-                                    .foregroundColor(.gray)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("现在")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.gray)
-                                    Text("平静")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(.blue)
+                                .padding(.vertical, 4)
+                            } else {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack(spacing: 15) {
+                                        ForEach(Array(todayTrend.enumerated()), id: \.offset) { index, trend in
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(trend.time)
+                                                    .font(.system(size: 12))
+                                                    .foregroundColor(.gray)
+                                                Text(trend.emotion)
+                                                    .font(.system(size: 14, weight: .medium))
+                                                    .foregroundColor(MoodUtils.getMoodColor(trend.emotion))
+                                            }
+                                            
+                                            if index < todayTrend.count - 1 {
+                                                Image(systemName: "arrow.right")
+                                                    .foregroundColor(.gray)
+                                            }
+                                        }
+                                    }
+                                    .padding(.vertical, 4)
+                                    
+                                    // 添加趋势分析
+                                    HStack(spacing: 8) {
+                                        Circle()
+                                            .fill(Color.green.opacity(0.7))
+                                            .frame(width: 6, height: 6)
+                                        Text("情绪记录已更新，继续保持记录习惯")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.gray)
+                                    }
                                 }
                             }
-                            .padding(.vertical, 8)
                         }
                         .padding()
                         .background(Color.white)
@@ -502,7 +627,6 @@ struct EmotionAnalysisView: View {
                             )
                             .cornerRadius(16)
                         }
-                        .padding(.horizontal)
                     }
                     .padding(.horizontal)
                 }
