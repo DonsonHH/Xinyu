@@ -284,7 +284,7 @@ struct WeekView: View {
     }
     
     private var weekAverage: Double {
-        let scores = weekData.map { $0.score }
+        let scores = weekData.map { $0.score }.filter { $0 > 0 }
         return scores.isEmpty ? 0.0 : scores.reduce(0, +) / Double(scores.count)
     }
     
@@ -450,6 +450,11 @@ struct MonthView: View {
         }
     }
     
+    private var monthAverage: Double {
+        let scores = monthData.map { $0.score }.filter { $0 > 0 }
+        return scores.isEmpty ? 0.0 : scores.reduce(0, +) / Double(scores.count)
+    }
+    
     private var monthRange: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy年M月"
@@ -500,6 +505,18 @@ struct MonthView: View {
                     }
                     
                     Chart {
+                        // 平均值线
+                        RuleMark(
+                            y: .value("平均值", monthAverage)
+                        )
+                        .foregroundStyle(Color.gray.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .leading) {
+                            Text("趋势")
+                                .font(.system(size: 5))
+                                .foregroundColor(.gray)
+                        }
+                        
                         ForEach(monthData, id: \.date) { data in
                             LineMark(
                                 x: .value("日期", data.date),
@@ -528,6 +545,25 @@ struct MonthView: View {
                             }
                         }
                     }
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(15)
+                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                
+                // 月情绪概况
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("本月情绪概况")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
+                    
+                    Text(MoodUtils.getComprehensiveStatus(monthAverage))
+                        .font(.system(size: 16, design: .rounded))
+                        .foregroundColor(.black)
+                    
+                    Text("综合值: \(String(format: "%.1f", monthAverage))")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundColor(Color(red: 255/255, green: 159/255, blue: 10/255))
                 }
                 .padding()
                 .background(Color.white)
@@ -604,7 +640,7 @@ struct YearView: View {
     }
     
     private var yearAverage: Double {
-        let scores = yearData.map { $0.score }
+        let scores = yearData.map { $0.score }.filter { $0 > 0 }
         return scores.isEmpty ? 0.0 : scores.reduce(0, +) / Double(scores.count)
     }
     
@@ -652,6 +688,18 @@ struct YearView: View {
                     }
                     
                     Chart {
+                        // 平均值线
+                        RuleMark(
+                            y: .value("平均值", yearAverage)
+                        )
+                        .foregroundStyle(Color.gray.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                        .annotation(position: .leading) {
+                            Text("趋势")
+                                .font(.system(size: 5))
+                                .foregroundColor(.gray)
+                        }
+                        
                         ForEach(yearData, id: \.date) { data in
                             LineMark(
                                 x: .value("月份", data.date),
